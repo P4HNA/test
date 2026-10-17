@@ -1,0 +1,902 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   AVATAR
+   Lives here rather than in a layout's <style> because the top bar shows it on
+   every page, the homepage included -- and the homepage does not pull in
+   partials/_classroom-theme.
+
+   One shape for both cases. The circle is a clipping container: the initials
+   paint the whole of it, and an uploaded photo is laid on top INSIDE the clip.
+   That ordering is the point -- a picture that never arrives (wrong host in
+   the stored URL, a file since deleted) used to leave the browser's square
+   broken-image box behind, because a replaced element with no intrinsic size
+   ignores border-radius. Now the worst case is a plain initials circle.
+   ============================================================================ */
+
+.pd-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 50%;
+    line-height: 1;
+    text-transform: uppercase;
+    background: var(--surface);
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* The hairline sits inside the clip as a shadow, not as a border: a border
+   would be painted outside overflow:hidden and could square off the edge. */
+.pd-avatar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px hsl(var(--hue, 214) 45% 82%);
+    pointer-events: none;
+}
+
+/* Two classes deep so the shared .pd-avatar rule in public/css/ui.css -- which
+   classroom pages load after this file -- cannot repaint the tint. */
+.pd-avatar .pd-avatar-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-weight: 700;
+    letter-spacing: .02em;
+    background: hsl(var(--hue, 214) 62% 92%);
+    color: hsl(var(--hue, 214) 55% 26%);
+}
+
+.pd-avatar .pd-avatar-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: inherit;
+    object-fit: cover;
+    background: var(--surface);
+}
+
+.pd-avatar-has-photo::after {
+    box-shadow: inset 0 0 0 1px var(--mist);
+}
+
+/* Dark mode inverts it: a deep tint with a bright glyph, so the circle doesn't
+   burn a hole in the page. */
+html.dark .pd-avatar .pd-avatar-initials {
+    background: hsl(var(--hue, 214) 40% 18%);
+    color: hsl(var(--hue, 214) 70% 78%);
+}
+
+html.dark .pd-avatar::after {
+    box-shadow: inset 0 0 0 1px hsl(var(--hue, 214) 35% 30%);
+}
+
+html.dark .pd-avatar-has-photo::after {
+    box-shadow: inset 0 0 0 1px var(--mist);
+}
+
+/* ============================================================================
+   SITE NAV
+   One bar for the homepage and for the classroom, so the top of the site reads
+   the same wherever you are. Lives here (not in a page's <style>) because both
+   layouts pull this file in through Vite, and sits outside @layer so Tailwind
+   never tree-shakes a class that only ever appears in the nav's own script.
+
+   It is built only on tokens both contexts define -- --paper, --surface,
+   --ink, --graphite, --mist -- plus one accent of its own: the gold sampled
+   from the flower mark, so the bar belongs to the logo rather than to the
+   homepage's blue or the classroom's redline.
+   ============================================================================ */
+
+/* Every page keeps room for the scrollbar whether it needs one or not. A short
+   page (About) and a long one (Courses) otherwise get viewports 15px apart, and
+   the whole bar -- links included -- jumps sideways as you move between them. */
+html {
+    scrollbar-gutter: stable;
+}
+
+.sn {
+    --sn-gold: #F7CC32;
+    --sn-height: 68px;
+
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in srgb, var(--paper) 76%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid transparent;
+    transition:
+        transform .35s cubic-bezier(.19, 1, .22, 1),
+        background-color .3s ease,
+        border-color .3s ease,
+        box-shadow .3s ease;
+}
+
+/* Flat against the top of the page; it only earns an edge once you scroll. */
+.sn.is-stuck {
+    background: color-mix(in srgb, var(--paper) 90%, transparent);
+    border-bottom-color: var(--mist);
+    box-shadow: 0 12px 30px -24px rgba(0, 0, 0, .6);
+}
+
+/* Slides away while scrolling down, comes back on any scroll up. */
+.sn.is-hidden {
+    transform: translateY(-100%);
+}
+
+.sn-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    height: var(--sn-height);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+/* ---------- Brand lockup ----------
+   The bar uses the shared lockup (components/brand, .pd-brand further down),
+   so the logo, wordmark and hover shine match the rest of the site. */
+
+/* ---------- Links ---------- */
+.sn-links {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+@media (min-width: 900px) {
+    .sn-links { display: flex; }
+}
+
+.sn-link {
+    position: relative;
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1;
+    text-align: center;
+    color: var(--graphite);
+    text-decoration: none;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        color .24s cubic-bezier(.4, 0, .2, 1),
+        background-color .24s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* The current page is bold, and bold text is wider -- which used to shove the
+   whole row sideways by a couple of pixels every time you moved between pages.
+   Each link therefore carries an invisible, zero-height copy of its own label
+   already set in the bold weight: the link is always as wide as its widest
+   state, so nothing moves when the weight actually changes. */
+.sn-link::before {
+    content: attr(data-label);
+    display: block;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+/* The original underline: a hairline in the text colour (black on light,
+   white on dark) that draws in from the left on hover, and sits full width
+   under the page you are on. Fast ease-out, so it answers the pointer. */
+.sn-link::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 1px;
+    height: 1px;
+    background: var(--ink);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .25s cubic-bezier(.23, 1, .32, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .sn-link:hover { color: var(--ink); }
+    .sn-link:hover::after { transform: scaleX(1); }
+}
+
+.sn-link:focus-visible::after {
+    transform: scaleX(1);
+}
+
+.sn-link[aria-current="page"] {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.sn-link[aria-current="page"]::after {
+    transform: scaleX(1);
+}
+
+/* ---------- Right-hand controls ---------- */
+.sn-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+/* Language and theme share one pill, so they read as one control instead of
+   two loose buttons. */
+.sn-cluster {
+    display: none;
+    align-items: center;
+    height: 34px;
+    border: 1px solid var(--mist);
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--paper) 60%, transparent);
+}
+
+@media (min-width: 640px) {
+    .sn-cluster { display: flex; }
+}
+
+/* The language form fills the pill's full height, so the two halves line up. */
+.sn-cluster form { display: flex; align-self: stretch; }
+
+.sn-cluster button {
+    appearance: none;
+    background: none;
+    border: 0;
+    height: 100%;
+    padding: 0 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--graphite);
+    cursor: pointer;
+    transition: color .2s ease, background-color .2s ease;
+}
+
+.sn-cluster .sn-lang {
+    min-width: 40px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .sn-cluster button:hover {
+        color: var(--ink);
+        background: color-mix(in srgb, var(--ink) 7%, transparent);
+    }
+}
+
+.sn-cluster .sn-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--mist);
+    flex: 0 0 auto;
+}
+
+/* ---------- Account chip ---------- */
+.sn-acct {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 10px 0 3px;
+    border: 1px solid var(--mist);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--paper) 60%, transparent);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    max-width: 190px;
+    transition: border-color .2s ease, background-color .2s ease;
+}
+
+@media (min-width: 640px) {
+    .sn-acct { display: inline-flex; }
+}
+
+.sn-acct:hover {
+    border-color: color-mix(in srgb, var(--ink) 28%, var(--mist));
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.sn-acct span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sn-acct svg {
+    flex: 0 0 auto;
+    color: var(--graphite);
+    transition: transform .25s ease;
+}
+
+.sn-acct[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+.sn-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    width: 244px;
+    border: 1px solid var(--mist);
+    border-radius: 10px;
+    background: var(--paper);
+    box-shadow: 0 24px 48px -20px rgba(0, 0, 0, .35);
+    overflow: hidden;
+    z-index: 50;
+}
+
+.sn-menu-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--mist);
+}
+
+.sn-menu a,
+.sn-menu button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 14px;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 13.5px;
+    text-align: left;
+    color: var(--ink);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+
+.sn-menu a:hover,
+.sn-menu button:hover {
+    background: var(--surface);
+}
+
+.sn-menu a svg,
+.sn-menu button svg {
+    color: var(--graphite);
+    flex: 0 0 auto;
+}
+
+.sn-menu-foot {
+    border-top: 1px solid var(--mist);
+}
+
+/* ---------- Plain buttons (signed out) ---------- */
+.sn-ghost {
+    display: none;
+    font-size: 14px;
+    color: var(--graphite);
+    text-decoration: none;
+    padding: 0 6px;
+    transition: color .2s ease;
+}
+
+.sn-ghost:hover { color: var(--ink); }
+
+.sn-cta {
+    display: none;
+    align-items: center;
+    height: 34px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.sn-cta:hover {
+    opacity: .88;
+    transform: translateY(-1px);
+}
+
+@media (min-width: 640px) {
+    .sn-ghost { display: inline-block; }
+    .sn-cta { display: inline-flex; }
+}
+
+/* ---------- Burger ---------- */
+.sn-burger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 34px;
+    border: 1px solid var(--mist);
+    border-radius: 8px;
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+@media (min-width: 900px) {
+    .sn-burger { display: none; }
+}
+
+/* ---------- Mobile sheet ---------- */
+.sn-sheet {
+    border-top: 1px solid var(--mist);
+    background: var(--paper);
+    padding: 14px 24px 22px;
+    max-height: calc(100dvh - var(--sn-height));
+    overflow-y: auto;
+}
+
+@media (min-width: 900px) {
+    .sn-sheet { display: none !important; }
+}
+
+.sn-sheet-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    font-size: 16px;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--mist);
+}
+
+.sn-sheet-link[aria-current="page"] {
+    font-weight: 700;
+}
+
+.sn-sheet-link[aria-current="page"]::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ink);
+}
+
+.sn-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 4px 0 14px;
+    border-bottom: 1px solid var(--mist);
+}
+
+.sn-sheet-foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sn,
+    .sn-link,
+    .sn-link::after,
+    .sn-acct svg,
+    .sn-cta {
+        transition: none;
+    }
+}
+
+/* ============================================================================
+   BRAND LOCKUP (components/brand)
+   The flower mark plus the two-line wordmark, used by the admin sidebar.
+
+   The component deliberately prints the wordmark TWICE: the second copy is a
+   shine layer that is stacked exactly on top of the first and revealed on
+   hover. Without .pd-brand-shine's absolute positioning the two copies fall
+   one under the other and the sidebar reads "PISETH.DESIGN" twice over --
+   which is what happened when this block went missing.
+
+   Everything is scoped under .pd-brand so the top bar's own lockup
+   (.sn-brand, further up this file) is not touched: both share the
+   .pd-brand-mark class.
+   ============================================================================ */
+
+.pd-brand {
+    --pd-mark: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--pd-mark) * .3);
+    color: inherit;
+    text-decoration: none;
+    border-radius: 10px;
+    -webkit-tap-highlight-color: transparent;
+    transition: scale .16s cubic-bezier(.23, 1, .32, 1);
+}
+
+.pd-brand:active { scale: .97; }
+
+.pd-brand:focus-visible {
+    outline: 2px solid var(--action, #0866FF);
+    outline-offset: 4px;
+}
+
+/* The mark sizes itself from the inline width/height the component sets. */
+.pd-brand .pd-brand-mark {
+    flex: none;
+    object-fit: contain;
+    transition: transform .3s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.pd-brand-word {
+    position: relative;
+    display: block;
+    font-family: 'Archivo', 'Kantumruy Pro', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: calc(var(--pd-mark) * .4);
+    line-height: .95;
+    letter-spacing: .03em;
+    white-space: nowrap;
+}
+
+.pd-brand-lines {
+    display: flex;
+    flex-direction: column;
+    transition: opacity .16s ease-out;
+}
+
+.pd-brand-word i {
+    font-style: normal;
+    color: #1877F2;
+}
+
+/* The shine: the second copy of the letters, filled with blue light that
+   follows the pointer. Absolutely positioned over the plain copy -- this is
+   the rule that stops the wordmark appearing twice. --sx/--sy come from
+   resources/js/app.js. */
+.pd-brand-shine {
+    position: absolute;
+    inset: 0;
+    color: transparent;
+    background-image: radial-gradient(circle calc(var(--pd-mark) * 2.2) at var(--sx, 50%) var(--sy, 45%), #B9D4FF 0%, #2E80FF 38%, #0866FF 62%, #0045B8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.pd-brand-shine i { color: transparent; }
+
+html.dark .pd-brand-shine {
+    background-image: radial-gradient(circle calc(var(--pd-mark) * 2.2) at var(--sx, 50%) var(--sy, 45%), #F2F7FF 0%, #8DB8FF 30%, #3D85FF 60%, #2461D6 100%);
+}
+
+.pd-brand:focus-visible .pd-brand-shine { opacity: 1; }
+.pd-brand:focus-visible .pd-brand-lines:not(.pd-brand-shine) { opacity: 0; }
+
+/* Hover only where there is a real pointer: on a touch screen a tap would
+   leave the letters stuck blue. */
+@media (hover: hover) and (pointer: fine) {
+    .pd-brand:hover .pd-brand-mark { transform: scale(1.12) rotate(8deg); }
+
+    .pd-brand:hover .pd-brand-shine {
+        opacity: 1;
+        transition-duration: .24s;
+    }
+
+    .pd-brand:hover .pd-brand-lines:not(.pd-brand-shine) {
+        opacity: 0;
+        transition-duration: .24s;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pd-brand,
+    .pd-brand .pd-brand-mark,
+    .pd-brand-lines { transition: none; }
+    .pd-brand:active { scale: none; }
+    .pd-brand:hover .pd-brand-mark { transform: none; }
+}
+
+/* ============================================================================
+   PROMOTION BAR
+   One live promotion from the admin, shown above the top bar on the homepage
+   and on the course library. It lives here rather than in a page's <style>
+   because both of those pages pull this file in through Vite -- the same
+   reason .sn-* does.
+
+   Built only on tokens both contexts define (--paper, --ink, --graphite,
+   --mist, --action), with its own tints mixed from --action, so it needs no
+   extra variables from either theme.
+   ============================================================================ */
+
+.promo {
+    position: relative;
+    z-index: 31;
+    overflow: hidden;
+    color: var(--ink);
+    background:
+        linear-gradient(100deg,
+            color-mix(in srgb, var(--action) 16%, transparent) 0%,
+            color-mix(in srgb, var(--action) 7%, transparent) 42%,
+            color-mix(in srgb, var(--action) 17%, transparent) 100%),
+        var(--paper);
+    border-bottom: 1px solid color-mix(in srgb, var(--action) 22%, var(--mist));
+}
+
+html.promo-dismissed .promo { display: none; }
+
+/* A slow sheen travelling across the band. Decorative only, and it never
+   repaints anything underneath -- it is a sibling layer, not a background. */
+.promo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(100deg,
+        transparent 20%,
+        color-mix(in srgb, #FFFFFF 26%, transparent) 42%,
+        transparent 62%);
+    transform: translateX(-60%);
+    animation: promo-sheen 7s ease-in-out 2s infinite;
+}
+
+html.dark .promo::after {
+    background: linear-gradient(100deg,
+        transparent 20%,
+        color-mix(in srgb, var(--action) 20%, transparent) 42%,
+        transparent 62%);
+}
+
+@keyframes promo-sheen {
+    0%   { transform: translateX(-60%); }
+    55%  { transform: translateX(60%); }
+    100% { transform: translateX(60%); }
+}
+
+.promo-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 14px;
+    max-width: 72rem;
+    min-height: 52px;
+    margin: 0 auto;
+    padding: 9px 56px 9px 24px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* ---------- The discount flag ---------- */
+.promo-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 11px;
+    border-radius: 999px;
+    background: var(--action);
+    color: #FFFFFF;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--action) 90%, transparent);
+}
+
+.promo-title {
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.promo-msg {
+    color: var(--graphite);
+}
+
+/* ---------- Countdown ----------
+   Tabular figures so the digits do not jitter as they tick. */
+.promo-clock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--action) 28%, var(--mist));
+    background: color-mix(in srgb, var(--paper) 70%, transparent);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+}
+
+.promo-clock svg { color: var(--action); flex: 0 0 auto; }
+
+.promo-clock b {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .02em;
+}
+
+/* ---------- Call to action ---------- */
+.promo-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 15px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform .18s cubic-bezier(.19, 1, .22, 1), opacity .2s ease;
+}
+
+.promo-cta svg { transition: transform .22s cubic-bezier(.19, 1, .22, 1); }
+
+.promo-cta:active { transform: scale(.97); }
+
+/* ---------- Dismiss ---------- */
+.promo-close {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--graphite);
+    cursor: pointer;
+    translate: 0 -50%;
+    transition: background-color .15s ease, color .15s ease, scale .14s cubic-bezier(.23, 1, .32, 1);
+}
+
+.promo-close:active { scale: .94; }
+
+@media (hover: hover) and (pointer: fine) {
+    .promo-cta:hover { opacity: .9; transform: translateY(-1px); }
+    .promo-cta:hover svg { transform: translateX(3px); }
+
+    .promo-close:hover {
+        background: color-mix(in srgb, var(--ink) 8%, transparent);
+        color: var(--ink);
+    }
+}
+
+/* Narrow screens: keep the flag, the title and the button; the message and the
+   clock wrap away rather than squeezing the row into three lines. */
+@media (max-width: 720px) {
+    .promo-inner {
+        justify-content: flex-start;
+        padding: 9px 48px 9px 16px;
+        gap: 6px 10px;
+    }
+
+    .promo-msg { display: none; }
+}
+
+@media (max-width: 480px) {
+    .promo-clock { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .promo::after { animation: none; }
+    .promo-cta,
+    .promo-cta svg,
+    .promo-close { transition: none; }
+    .promo-close:active,
+    .promo-cta:active { scale: none; transform: none; }
+}
+
+/* ---------- Discount ribbon ----------
+   The blue corner ribbon (components/discount-ribbon) and the blue ring around
+   a course card that a live promotion applies to. Clipped inside the card, so
+   it never overflows the grid, and the card's price chip moves out of its way. */
+.pd-ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 116px;
+    height: 116px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 6;
+}
+
+.pd-ribbon span {
+    position: absolute;
+    top: 24px;
+    right: -38px;
+    width: 160px;
+    padding: 6px 0;
+    transform: rotate(45deg);
+    background: linear-gradient(180deg, #0866FF, #0057E0);
+    color: #FFFFFF;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    box-shadow: 0 3px 8px rgba(0, 20, 80, .35);
+}
+
+.course-tile.is-promo {
+    border-color: #0866FF !important;
+    box-shadow: 0 0 0 1px #0866FF, 0 16px 32px -18px rgba(8, 102, 255, .55);
+}
+
+.course-tile.is-promo:hover {
+    border-color: #0866FF !important;
+}
+
+/* ---------- Khmer typography ----------
+   Khmer is set in Kantumruy Pro (loaded after Archivo in every font stack,
+   so Latin stays Archivo and Khmer falls through to it glyph by glyph).
+   Khmer stacks vowels above and subscript consonants below the line, so it
+   needs more line height than Latin, no negative tracking, and a slightly
+   larger minimum size. These rules only apply when the page is in Khmer. */
+
+/* Tracking: Latin headings are tightened, which pushes Khmer clusters into
+   each other. Latin-only brand lettering keeps its own spacing. */
+html:lang(km) body :not(.pd-brand-word, .pd-brand-word *, .stage-word, .stage-word *, .intro-words, .intro-words *, .fan-mark) {
+    letter-spacing: 0;
+}
+
+html:lang(km) body {
+    line-height: 1.7;
+}
+
+/* Running text. */
+html:lang(km) :is(p, li, dd, blockquote, label, td, th, figcaption, summary):not(.stage-word, .ad-kpi-value) {
+    line-height: 1.75;
+}
+
+/* Headings: room for stacked marks without the loose look of body text. */
+html:lang(km) :is(h1, h2, h3, h4, h5, h6, .font-display):not(.stage-word) {
+    line-height: 1.4;
+}
+
+/* Controls: enough room that a subscript is never clipped by a fixed height. */
+html:lang(km) :is(button, input, select, textarea, .pd-btn) {
+    line-height: 1.5;
+}
+
+/* Khmer below ~12px loses its small marks; lift the smallest sizes a little. */
+html:lang(km) :is(.text-xs, .ad-xs) {
+    font-size: .8125rem;
+    line-height: 1.6;
+}
+
+html:lang(km) :is(.text-\[10px\], .text-\[11px\]) {
+    font-size: .75rem;
+    line-height: 1.6;
+}
