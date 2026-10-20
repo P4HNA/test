@@ -7,27 +7,12 @@
     <title>Piseth.Design Classroom</title>
     @include('partials._favicon')
 
-    {{-- Set theme before paint so there's no flash of the wrong theme --}}
+    {{-- Set theme before paint so there's no flash of the wrong theme (same key and default as every page). --}}
     <script>
         (function() {
             var saved = localStorage.getItem('pd-theme');
             var theme = saved || 'dark';
             if (theme === 'dark') document.documentElement.classList.add('dark');
-
-            /* Sections below the hero rise in as they scroll into view. They are
-               hidden up front only when that can actually run, so the page never
-               flashes content in and back out, and never leaves it hidden. */
-            if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                /* per-section scroll reveal switched off */
-            }
-
-            /* Curtain intro: once per browser session, never with reduced motion. */
-            try {
-                if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !sessionStorage.getItem('pd-intro')) {
-                    sessionStorage.setItem('pd-intro', '1');
-                    document.documentElement.classList.add('js-intro');
-                }
-            } catch (e) {}
         })();
     </script>
 
@@ -35,16 +20,16 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@700;800;900&family=Caveat:wght@500;600&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {{-- Archivo + Kantumruy Pro: the shared top bar. Inter, Noto Sans Khmer, JetBrains Mono: this page. --}}
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@700;800;900&family=Kantumruy+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Khmer:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    {{--
-        Requires class-based dark mode in your Tailwind config:
-        Tailwind v3 (tailwind.config.js):   darkMode: 'class'
-        Tailwind v4 (app.css):              @custom-variant dark (&:where(.dark, .dark *));
-    --}}
     <style>
+        /* ------------------------------------------------------------------
+           Variables used by the shared top bar, promotion bar and Telegram
+           dialog (same values as every other page, so they look identical).
+           ------------------------------------------------------------------ */
         :root {
             --paper: #FFFFFF;
             --surface: #F4F4F6;
@@ -52,13 +37,9 @@
             --graphite: #5E5E5E;
             --mist: #E6E6EA;
             --action: #0866FF;
-            /* Blue fill: buttons, pills. White text on it is 4.8:1 */
             --action-ink: #0062EB;
-            /* Blue text/links: 4.8:1+ on paper, surface and tints */
             --action-soft: #EAF4FF;
-            /* Light: tinted backgrounds behind action elements */
             --danger: #DC2626;
-            /* Red: log out and other destructive actions */
             --blue: #0866FF;
             --promo-bg: #EEF5FF;
             --promo-line: #D6E6FF;
@@ -81,1088 +62,624 @@
 
         body {
             font-family: 'Archivo', 'Kantumruy Pro', system-ui, sans-serif;
-            background: var(--paper);
-            color: var(--ink);
             transition: background-color .45s ease, color .45s ease;
         }
 
-        .font-display {
-            font-family: 'Archivo Expanded', 'Kantumruy Pro', system-ui, sans-serif;
-        }
+        .font-display { font-family: 'Archivo Expanded', 'Kantumruy Pro', system-ui, sans-serif; }
+        [x-cloak] { display: none !important; }
 
-        .font-hand {
-            font-family: 'Caveat', 'Kantumruy Pro', cursive;
-        }
-
-        [x-cloak] {
-            display: none !important;
-        }
-
-        :focus-visible {
-            outline: 2px solid var(--action);
-            outline-offset: 3px;
-        }
-
-        /* ============================================================
-           THEME SWITCH ANIMATION
-           A circle of the incoming theme's paper colour expands from the
-           toggle button and washes over the whole page.
-           ============================================================ */
-
+        /* Theme switch: a circle of the incoming colour washes over the page. */
         .theme-ripple {
-            position: fixed;
-            z-index: 90;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
+            position: fixed; z-index: 90; width: 0; height: 0; border-radius: 50%;
+            pointer-events: none; transform: translate(-50%, -50%);
             animation: theme-ripple-grow .62s cubic-bezier(.4, 0, .2, 1) forwards;
         }
-
         @keyframes theme-ripple-grow {
-            0% {
-                width: 0;
-                height: 0;
-                opacity: 1;
-            }
-
-            62% {
-                opacity: 1;
-            }
-
-            100% {
-                width: var(--r);
-                height: var(--r);
-                opacity: 0;
-            }
+            0% { width: 0; height: 0; opacity: 1; }
+            62% { opacity: 1; }
+            100% { width: var(--r); height: var(--r); opacity: 0; }
         }
 
-        .theme-btn {
-            transition: transform .3s cubic-bezier(.19, 1, .22, 1), border-color .3s ease;
+        /* On the homepage the language / theme switch lives in the floating
+           pill at the bottom-right (.hm-prefs), so the copy in the shared top
+           bar is hidden here only. Every other page keeps it. */
+        .hm-body #site-nav .sn-cluster { display: none !important; }
+
+        /* ==================================================================
+           HOME — design tokens (light, then dark)
+           ================================================================== */
+        .hm-body {
+            --h-bg: #F5F7FA;
+            --h-card: #FFFFFF;
+            --h-subtle: #F8FAFC;
+            --h-chip: #F1F5F9;
+            --h-text: #1C1C1E;
+            --h-muted: #65676B;
+            --h-quote: #3A3B3F;
+            --h-line: #E4E6EB;
+            --h-line-soft: rgba(226, 232, 240, .8);
+            --h-blue: #1877F2;
+            --h-sky: #4DA3FF;
+            --h-sky-hover: #3892F3;
+            --h-navy: #0071E3;
+            --h-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+            --h-avatar-a: #E2E8F0;
+            --h-avatar-b: #CBD5E1;
+            --h-avatar-fg: #FFFFFF;
+            background: var(--h-bg);
+            color: var(--h-text);
         }
 
-        .theme-btn:hover {
-            transform: rotate(18deg);
+        html.dark .hm-body {
+            --h-bg: #0B0B0D;
+            --h-card: #1C1C1E;
+            --h-subtle: #151B23;
+            --h-chip: #151B23;
+            --h-text: #F5F5F7;
+            --h-muted: #A1A1A6;
+            --h-quote: #C7C7CC;
+            --h-line: #2E3034;
+            --h-line-soft: #222936;
+            --h-avatar-a: #2A313C;
+            --h-avatar-b: #1A2029;
+            --h-avatar-fg: #4B5563;
         }
 
-        .theme-btn:active {
-            transform: scale(.88) rotate(-14deg);
+        .hm-main, .hm-footer, .hm-prefs, .hm-modal, .hm-toast {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Khmer', sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
+        .hm-km { font-family: 'Noto Sans Khmer', Inter, sans-serif; }
+        .hm-mono { font-family: 'JetBrains Mono', 'Noto Sans Khmer', ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .hm-wrap { max-width: 80rem; margin: 0 auto; padding: 0 1rem; }
+        @media (min-width: 640px) { .hm-wrap { padding: 0 1.5rem; } }
+        @media (min-width: 1024px) { .hm-wrap { padding: 0 2rem; } }
+        .hm-section { padding: 3rem 0; scroll-margin-top: 5rem; }
+        @media (min-width: 640px) { .hm-section { padding: 4rem 0; } }
+        .hm-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .18em; color: var(--h-sky); margin: 0; }
+        @media (min-width: 640px) { .hm-label { font-size: 12px; } }
+        .hm-h2 { margin: .75rem 0 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -.02em; line-height: 1.2; color: var(--h-text); }
+        @media (min-width: 640px) { .hm-h2 { font-size: 2.25rem; } }
+        html:lang(km) .hm-h2 { line-height: 1.45; }
+        .hm-desc { margin: .75rem 0 0; font-size: .875rem; line-height: 1.65; color: var(--h-muted); max-width: 42rem; }
+        @media (min-width: 640px) { .hm-desc { font-size: 1rem; } }
+        .hm-head { display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 2rem; }
+        @media (min-width: 1024px) { .hm-head { flex-direction: row; align-items: flex-end; justify-content: space-between; margin-bottom: 2.5rem; } }
+        .hm-head > div:first-child { min-width: 0; }
+        .hm-ico { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
+        .hm-ico-sm { width: 1rem; height: 1rem; flex-shrink: 0; }
+        .hm-ico-xs { width: .875rem; height: .875rem; flex-shrink: 0; }
+        .hm-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-        /* ============================================================
+        /* ---------- blank profile ---------- */
+        .hm-avatar { position: relative; flex-shrink: 0; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; border-radius: 9999px; background: linear-gradient(to bottom, var(--h-avatar-a), var(--h-avatar-b)); color: var(--h-avatar-fg); }
+        .hm-avatar svg { width: 82%; height: 82%; }
+        .hm-avatar--square { border-radius: 1rem; }
+
+        /* ---------- buttons ---------- */
+        .hm-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 46px; padding: .75rem 1.5rem; border-radius: .75rem; font-size: .875rem; font-weight: 600; text-decoration: none; transition: all .2s ease; cursor: pointer; }
+        .hm-btn-primary { color: #fff; background: var(--h-sky); box-shadow: 0 4px 6px -1px rgba(77, 163, 255, .2); }
+        .hm-btn-primary:hover { background: var(--h-sky-hover); }
+        .hm-btn-ghost { color: #1E293B; background: #F1F5F9; border: 1px solid rgba(226, 232, 240, .8); }
+        .hm-btn-ghost:hover { background: #E2E8F0; }
+        html.dark .hm-btn-ghost { color: #E2E8F0; background: #151B23; border-color: #222936; }
+        html.dark .hm-btn-ghost:hover { background: #1C232D; }
+        .hm-arrow { transition: transform .2s ease; }
+        .hm-btn:hover .hm-arrow, .hm-link:hover .hm-arrow { transform: translateX(4px); }
+        .hm-link { display: inline-flex; align-items: center; gap: .25rem; font-size: .875rem; font-weight: 600; color: var(--h-blue); text-decoration: none; }
+        html.dark .hm-link { color: var(--h-sky); }
+
+        /* ==================================================================
            HERO
-           Short headline on top, then a fan of course cards below it.
-           The fan is positioned by JS (see the script at the bottom):
-           it sways left and right by itself, follows the page scroll,
-           and can be dragged or stepped with the arrow buttons.
-           ============================================================ */
-        .hero {
-            position: relative;
-            z-index: 0;
-            isolation: isolate;
-            padding: 0 0 clamp(20px, 3vh, 36px);
-            /* The headline slides in from the right on load; clip sideways so
-               that never shows a horizontal scrollbar on a phone. */
-            overflow-x: clip;
-        }
-
-        /* ==========================================================
-           HEADER STAGE
-           Built after the hero on pamidordesign.co: a big two-line wordmark
-           (PISETH. / DESIGN) beside a tall portrait on the right, set in
-           --blue (#0866FF) with the headline and script line.
-             .intro      first-visit curtain (once per browser session)
-             .stage-word giant PISETH. / DESIGN, one .w-line per row
-             .stage-card the portrait; tilts with the pointer, and the photo
-                         inside slides at a different rate for depth
-           Timing: everything hangs off --t0, which is 0s normally and the
-           length of the curtain on a first visit (see html.js-intro).
-           ========================================================== */
-        :root {
-            --t0: 0s;
-        }
-
-        html.js-intro {
-            --t0: 2.05s;
-            animation: intro-lock 2.9s steps(1, end);
-        }
-
-        @keyframes intro-lock {
-
-            0%,
-            100% {
-                overflow: hidden;
-            }
-        }
-
-        /* ---------- Intro curtain ---------- */
-        @property --n {
-            syntax: '<integer>';
-            inherits: false;
-            initial-value: 0;
-        }
-
-        .intro {
-            display: none;
-        }
-
-        html.js-intro .intro {
-            position: fixed;
-            inset: 0;
-            z-index: 200;
-            display: grid;
-            place-items: center;
-            background: #0A0A0A;
-            color: #FFFFFF;
-            animation: intro-out .8s cubic-bezier(.76, 0, .24, 1) 2.05s forwards;
-        }
-
-        .intro-words {
-            position: relative;
-            display: grid;
-            place-items: center;
-            width: min(92vw, 1100px);
-            height: clamp(64px, 14vw, 170px);
-            font-family: 'Archivo Expanded', 'Kantumruy Pro', system-ui, sans-serif;
-            font-weight: 800;
-            font-size: clamp(2rem, 8.5vw, 7rem);
-            line-height: 1;
-            letter-spacing: -.04em;
-            text-transform: uppercase;
-            text-align: center;
-        }
-
-        .intro-words>span {
-            position: absolute;
-            max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            opacity: 0;
-            animation: intro-flash .26s steps(1, end) calc(.15s + var(--k) * .26s) forwards;
-        }
-
-        .intro-words>.intro-final {
-            animation: intro-final .75s cubic-bezier(.16, 1, .3, 1) 1.5s forwards;
-        }
-
-        .intro-final i {
-            display: inline-block;
-            width: .16em;
-            height: .16em;
-            margin-left: .06em;
-            border-radius: 50%;
-            background: #3D85FF;
-        }
-
-        .intro-count {
-            position: absolute;
-            bottom: clamp(18px, 4vh, 34px);
-            font-size: .8rem;
-            font-weight: 500;
-            letter-spacing: .14em;
-            text-transform: uppercase;
-            opacity: .7;
-        }
-
-        .intro-count {
-            left: clamp(18px, 4vw, 40px);
-            counter-reset: n var(--n);
-            animation: intro-n 1.5s cubic-bezier(.6, 0, .2, 1) .1s forwards;
-        }
-
-        .intro-count::before {
-            content: counter(n, decimal-leading-zero) '%';
-        }
-
-        @keyframes intro-n {
-            to {
-                --n: 100;
-            }
-        }
-
-        @keyframes intro-flash {
-
-            0%,
-            99.9% {
-                opacity: 1;
-            }
-
-            100% {
-                opacity: 0;
-            }
-        }
-
-        @keyframes intro-final {
-            from {
-                opacity: 0;
-                translate: 0 40%;
-                scale: .92;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes intro-out {
-            to {
-                clip-path: inset(0 0 100% 0);
-                visibility: hidden;
-            }
-        }
-
-        /* ---------- Stage layout ---------- */
-        .stage,
-        .stage-inner {
-            box-sizing: border-box;
-        }
-
-        .stage {
-            --mx: 0;
-            --my: 0;
-            --sy: 0;
-            position: relative;
-            isolation: isolate;
-            display: flex;
-            min-height: max(560px, calc(100vh - 64px));
-            min-height: max(560px, calc(100svh - 64px));
-            padding: clamp(16px, 3vh, 32px) 0 clamp(20px, 4vh, 40px);
-            background: var(--paper);
-            overflow-x: clip;
-        }
-
-        .stage-inner {
-            flex: 1;
-            display: grid;
-            grid-template-columns: minmax(0, 1.16fr) minmax(0, .84fr);
-            column-gap: clamp(16px, 3vw, 48px);
-            width: 100%;
-            max-width: 1320px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-
-        .stage-left {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            gap: clamp(12px, 2vh, 24px);
-            min-width: 0;
-        }
-
-        .stage-eyebrow {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 16px;
-            margin-bottom: clamp(6px, 1.4vh, 16px);
-        }
-
-        .stage-script {
-            font-family: 'Caveat', 'Kantumruy Pro', cursive;
-            font-weight: 600;
-            font-size: clamp(1.25rem, 2.2vw, 1.9rem);
-            line-height: 1;
-            color: var(--blue);
-            rotate: -4deg;
-            transform-origin: 100% 50%;
-            animation: script-in .8s cubic-bezier(.34, 1.5, .64, 1) calc(var(--t0) + 1.2s) backwards;
-        }
-
-        html:lang(km) .stage-script {
-            font-size: 1rem;
-            line-height: 1.4;
-        }
-
-        /* The giant word. Font size is fitted to the layout by the script;
-           the vw value is only the no-JS fallback. */
-        .stage-word {
-            position: relative;
-            z-index: 4;
-            display: block;
-            width: max-content;
-            margin: 0 0 0 -.05em;
-            font-family: 'Archivo Expanded', 'Kantumruy Pro', system-ui, sans-serif;
-            font-weight: 900;
-            font-size: clamp(2.6rem, 11vw, 11rem);
-            line-height: .84;
-            letter-spacing: -.05em;
-            color: var(--blue);
-            translate: calc(var(--mx) * -14px) calc(var(--sy) * -46px);
-            user-select: none;
-            -webkit-user-select: none;
-            pointer-events: none;
-        }
-
-        /* One clipped line per row so the letters rise out of a mask. */
-        .w-line {
-            display: flex;
-            padding: .07em .06em .02em;
-            overflow: hidden;
-        }
-
-        .w-line+.w-line {
-            margin-top: -.04em;
-        }
-
-        .stage-word .w-line>span {
-            display: block;
-            animation: letter-in 1.25s cubic-bezier(.16, 1, .3, 1) calc(var(--t0) + .1s + var(--i) * .05s) backwards;
-        }
-
-        .stage-bottom {
-            display: flex;
-            flex-direction: column;
-            gap: clamp(14px, 2.4vh, 24px);
-        }
-
-        .hero-title {
-            margin: 0;
-            max-width: 19em;
-            font-family: 'Archivo Expanded', 'Kantumruy Pro', system-ui, sans-serif;
-            font-weight: 800;
-            font-size: clamp(1.25rem, 2.2vw, 2.05rem);
-            line-height: 1.1;
-            letter-spacing: -.03em;
-            text-wrap: balance;
-            color: var(--ink);
-        }
-
-        .hero-line {
-            display: block;
-        }
-
-        .hero-title em {
-            display: block;
-            margin-top: .3em;
-            font-style: normal;
-            color: var(--ink);
-        }
-
-        .rise {
-            animation: rise-in .95s cubic-bezier(.16, 1, .3, 1) calc(var(--t0) + var(--d, 0s)) backwards;
-        }
-
-        .stage-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 14px 28px;
-        }
-
-        .hero-sub {
-            margin: 0;
-            max-width: 26ch;
-            font-size: clamp(.92rem, 1.25vw, 1.02rem);
-            line-height: 1.5;
-            color: var(--graphite);
-        }
-
-        .hero-ctas {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        /* Hero buttons
-           Primary   = brand blue, white text. On hover: white/paper fill with blue text.
-           Secondary = paper fill with a hairline border. On hover: fills with ink (black in
-                       light mode, white in dark mode).
-           They never end up the same colour, and both work in light and dark mode. */
-        .stage .hero-cta {
-            border: 1px solid transparent;
-            border-radius: 12px;
-            letter-spacing: -.005em;
-            transition: background-color .25s ease, color .25s ease, border-color .25s ease, box-shadow .3s ease;
-        }
-
-        .stage .hero-cta.is-primary {
-            background: var(--action);
-            color: #FFFFFF;
-            border-color: var(--action);
-            box-shadow: 0 14px 26px -12px rgba(24, 119, 242, .65);
-        }
-
-        .stage .hero-cta.is-primary:hover,
-        .stage .hero-cta.is-primary:focus-visible {
-            background: var(--action-soft);
-            color: var(--action-ink);
-            border-color: var(--action);
-            box-shadow: 0 18px 30px -14px rgba(24, 119, 242, .5);
-        }
-
-        .stage .hero-cta.is-secondary {
-            background: var(--paper);
-            color: var(--ink);
-            border-color: var(--mist);
-            box-shadow: 0 10px 22px -14px rgba(10, 10, 10, .35);
-        }
-
-        .stage .hero-cta.is-secondary:hover,
-        .stage .hero-cta.is-secondary:focus-visible {
-            background: var(--ink);
-            color: var(--paper);
-            border-color: var(--ink);
-            box-shadow: 0 18px 30px -14px rgba(10, 10, 10, .55);
-        }
-
-        /* ---------- Portrait card ---------- */
-        .stage-right {
-            position: relative;
-            min-width: 0;
-        }
-
-        .stage-card {
-            position: relative;
-            z-index: 1;
-            height: 100%;
-            min-height: 440px;
-            background: none;
-            transform-origin: 50% 100%;
-            animation: card-in 1.4s cubic-bezier(.16, 1, .3, 1) calc(var(--t0) + .2s) backwards;
-        }
-
-        /* Cut-out portrait: no card, no crop. The person stands on the page and sits on the bottom edge. */
-        .stage-card img {
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            object-position: 50% 100%;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
-            animation: photo-breathe 14s ease-in-out calc(var(--t0) + 1.6s) infinite alternate;
-            transform-origin: 50% 100%;
-        }
-
-        html.dark .stage-card img {
-            filter: brightness(.95) contrast(1.05);
-        }
-
-        /* ---------- Keyframes ---------- */
-        @keyframes rise-in {
-            from {
-                opacity: 0;
-                translate: 0 28px;
-            }
-        }
-
-        @keyframes letter-in {
-            from {
-                translate: 0 108%;
-                rotate: 7deg;
-            }
-        }
-
-        @keyframes card-in {
-            from {
-                opacity: 0;
-                translate: 0 48px;
-            }
-        }
-
-        @keyframes photo-in {
-            from {
-                scale: 1.4;
-            }
-        }
-
-        /* After the reveal the photo keeps a slow, barely-there zoom, like a held breath */
-        @keyframes photo-breathe {
-            from {
-                scale: 1;
-            }
-
-            to {
-                scale: 1.02;
-            }
-        }
-
-        @keyframes script-in {
-            from {
-                opacity: 0;
-                rotate: 6deg;
-                translate: 0 14px;
-            }
-        }
-
-        /* ---------- Tablet and phone ---------- */
-        @media (max-width: 900px) {
-            .stage {
-                min-height: 0;
-                padding-top: 14px;
-            }
-
-            .stage-inner {
-                grid-template-columns: minmax(0, 1fr);
-                row-gap: 0;
-            }
-
-            /* Let the two halves of the left column be ordered around the
-               portrait: eyebrow + word, then photo, then the copy. */
-            .stage-left {
-                display: contents;
-            }
-
-            .stage-top {
-                order: 1;
-            }
-
-            .stage-right {
-                order: 2;
-                margin-top: -7vw;
-            }
-
-            .stage-bottom {
-                order: 3;
-                margin-top: 22px;
-            }
-
-            .stage-card {
-                height: auto;
-                min-height: 0;
-                aspect-ratio: 4 / 4.6;
-            }
-
-            .hero-title {
-                font-size: clamp(1.3rem, 5.6vw, 1.9rem);
-            }
-        }
-
-        /* ---------- Fan entrance ----------
-           The header stage above animates itself; the course fan then rises
-           into place and its cards follow, timed by the fan script with the
-           same offsets (HERO_DELAY). Keyframes only describe the starting
-           pose, so nothing stays hidden if an animation never runs. */
-        .fan.hero-in-up {
-            animation: hero-rise .9s cubic-bezier(.16, 1, .3, 1) calc(var(--t0) + 1.1s) backwards;
-        }
-
-        @keyframes hero-rise {
-            from {
-                opacity: 0;
-                translate: 0 56px;
-            }
-        }
-
-        /* ---------- Scroll reveal ----------
-           Sections below the hero rise in once, as they reach the viewport;
-           --i staggers siblings. They are hidden first only while the reveal
-           script is in charge (html.js-reveal, set in <head>), so with no
-           JavaScript, or with reduced motion, everything simply shows. */
-        .js-reveal [data-reveal]:not(.is-in) {
-            opacity: 0;
-        }
-
-        .js-reveal [data-reveal].is-in {
-            animation: reveal-up .85s cubic-bezier(.16, 1, .3, 1) calc(var(--i, 0) * 90ms) backwards;
-        }
-
-        @keyframes reveal-up {
-            from {
-                opacity: 0;
-                translate: 0 32px;
-            }
-        }
-
-        /* ---------- The fan ---------- */
-        .fan {
-            --cw: clamp(150px, 18vw, 250px);
-            /* card width, everything else scales from it */
-            --ch: calc(var(--cw) * 1.65);
-            /* card height */
-            --pivot: calc(var(--cw) * 3.6);
-            /* distance from card bottom to the point the fan swings around */
-            position: relative;
-            isolation: isolate;
-            overflow: hidden;
-            margin: clamp(20px, 3.5vh, 36px) clamp(16px, 5vw, 96px) 0;
-            height: calc(var(--ch) * 1.42 + 28px);
-            border: 1px solid var(--mist);
-            border-radius: 22px;
-            background:
-                radial-gradient(120% 55% at 50% 108%, color-mix(in srgb, var(--ink) 9%, transparent), transparent 62%),
-                var(--surface);
-            touch-action: pan-y;
-            cursor: grab;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-
-        .fan.is-dragging {
-            cursor: grabbing;
-        }
-
-        /* The grain is a fixed, mix-blend-mode layer covering the whole viewport, so the
-           browser has to reblend the entire screen on every repaint underneath it — not
-           just wherever changed. That cost isn't worth a barely-visible texture on a
-           phone, especially stacked on top of the fan's own animation frames below. */
-        @media (max-width: 640px),
-        (pointer: coarse) {
-            .paper-grain {
-                display: none;
-            }
-        }
-
-        .fan-card {
-            position: absolute;
-            left: 50%;
-            top: 28px;
-            display: block;
-            width: var(--cw);
-            height: var(--ch);
-            margin-left: calc(var(--cw) / -2);
-            color: inherit;
-            text-decoration: none;
-            transform-origin: 50% calc(100% + var(--pivot));
-            visibility: hidden;
-            will-change: transform, opacity;
-            -webkit-user-drag: none;
-        }
-
-        .fan-face {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            height: 100%;
-            padding: calc(var(--cw) * .09);
-            border-radius: calc(var(--cw) * .07);
-            overflow: hidden;
-            background: var(--bg);
-            color: var(--fg);
-            box-shadow: 0 30px 44px -24px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .1);
-            /* the springy cubic-bezier overshoots on purpose: that is the "pop" on hover */
-            transition:
-                translate .45s cubic-bezier(.34, 1.56, .64, 1),
-                scale .45s cubic-bezier(.34, 1.56, .64, 1),
-                box-shadow .35s ease;
-        }
-
-        .fan-card:hover .fan-face,
-        .fan-card:focus-visible .fan-face {
-            translate: 0 -16px;
-            scale: 1.05;
-            box-shadow: 0 46px 60px -28px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(255, 255, 255, .1);
-        }
-
-        .fan-card:focus-visible {
-            outline-offset: 6px;
-        }
-
-        .fan-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 8px;
-        }
-
-        .fan-mark {
-            font-family: 'Archivo Expanded', 'Kantumruy Pro', system-ui, sans-serif;
-            font-weight: 900;
-            font-size: calc(var(--cw) * .34);
-            line-height: .9;
-            letter-spacing: -.04em;
-        }
-
-        .fan-badge {
-            margin-top: 2px;
-            padding: 2px 7px;
-            border: 1px solid currentColor;
-            border-radius: 99px;
-            font-size: max(9px, calc(var(--cw) * .05));
-            font-weight: 600;
-            line-height: 1.5;
-            opacity: .85;
-        }
-
-        .fan-badge.is-sale {
-            border-color: transparent;
-            background: #FFFFFF;
-            color: #0866FF;
-            opacity: 1;
-            white-space: nowrap;
-        }
-
-        /* The old price stays full colour (faded blue fails contrast); the
-           strike and a lighter weight are what set it apart. */
-        .fan-badge.is-sale s {
-            font-weight: 500;
-        }
-
-        .fan-title {
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-            overflow: hidden;
-            margin-top: calc(var(--cw) * .09);
-            font-family: 'Archivo Expanded', 'Kantumruy Pro', system-ui, sans-serif;
-            font-weight: 800;
-            font-size: calc(var(--cw) * .085);
-            line-height: 1.12;
-            letter-spacing: -.02em;
-        }
-
-        .fan-meta {
-            margin-top: calc(var(--cw) * .03);
-            font-size: max(9px, calc(var(--cw) * .05));
-            opacity: .7;
-        }
-
-        /* Khmer stacks marks above and below the line: give the two-line
-           title room, and keep the small print above Khmer's legible floor. */
-        html:lang(km) .fan-title {
-            line-height: 1.34;
-        }
-
-        html:lang(km) :is(.fan-meta, .fan-badge) {
-            font-size: max(10.5px, calc(var(--cw) * .05));
-        }
-
-        /* Device shots peeking in from the bottom, like the phone and laptop mockups in the reference */
-        .fan-device {
-            position: absolute;
-            pointer-events: none;
-            padding: 3.5%;
-            background: #0d0c0a;
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, .14), 0 26px 30px -12px rgba(0, 0, 0, .55);
-        }
-
-        .fan-device.is-tab {
-            left: 12%;
-            right: -14%;
-            bottom: -7%;
-            height: 43%;
-            border-radius: calc(var(--cw) * .06);
-            transform: rotate(-7deg);
-            transform-origin: left bottom;
-        }
-
-        .fan-device.is-phone {
-            left: 20%;
-            width: 60%;
-            bottom: -10%;
-            height: 52%;
-            border-radius: calc(var(--cw) * .11);
-            transform: rotate(4deg);
-            transform-origin: center bottom;
-        }
-
-        .fan-device.is-phone::before {
-            content: '';
-            position: absolute;
-            top: 3%;
-            left: 50%;
-            z-index: 2;
-            width: 26%;
-            height: 4%;
-            transform: translateX(-50%);
-            border-radius: 99px;
-            background: #0d0c0a;
-        }
-
-        .dv-screen {
-            display: flex;
-            flex-direction: column;
-            gap: 7%;
-            width: 100%;
-            height: 100%;
-            padding: 10% 9% 0;
-            overflow: hidden;
-            border-radius: calc(var(--cw) * .045);
-            background: var(--fg);
-        }
-
-        .is-phone .dv-screen {
-            border-radius: calc(var(--cw) * .085);
-            padding-top: 16%;
-        }
-
-        .dv-screen i {
-            display: block;
-            flex: 0 0 auto;
-            height: 7%;
-            min-height: 4px;
-            border-radius: 99px;
-            background: var(--bg);
-            opacity: .35;
-        }
-
-        .dv-screen i:nth-child(1) {
-            width: 30%;
-            opacity: .9;
-        }
-
-        .dv-screen i:nth-child(2) {
-            width: 80%;
-        }
-
-        .dv-screen i:nth-child(3) {
-            width: 60%;
-        }
-
-        .dv-screen b {
-            display: block;
-            flex: 1;
-            border-radius: 6px 6px 0 0;
-            background: var(--bg);
-            opacity: .16;
-        }
-
-        .fan-ui {
-            position: absolute;
-            left: 50%;
-            bottom: 10px;
-            z-index: 500;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            transform: translateX(-50%);
-            cursor: default;
-        }
-
-        .fan-btn {
-            display: grid;
-            place-items: center;
-            width: 42px;
-            height: 42px;
-            border: 1px solid var(--mist);
-            border-radius: 50%;
-            background: var(--paper);
-            color: var(--ink);
-            cursor: pointer;
-            transition: background-color .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
-        }
-
-        .fan-btn:hover {
-            background: var(--ink);
-            color: var(--paper);
-            border-color: transparent;
-        }
-
-        .fan-btn:active {
-            transform: scale(.92);
-        }
-
-        .fan-caption {
-            min-width: 15ch;
-            max-width: 26ch;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--graphite);
-        }
-
-        @media (max-width: 480px) {
-            .fan-caption {
-                min-width: 11ch;
-                max-width: 14ch;
-                font-size: 12px;
-            }
-        }
-
-        .crop-mark {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            pointer-events: none;
-        }
-
-        .crop-mark.tl {
-            top: -8px;
-            left: -8px;
-            border-top: 1.5px solid var(--action);
-            border-left: 1.5px solid var(--action);
-        }
-
-        .crop-mark.tr {
-            top: -8px;
-            right: -8px;
-            border-top: 1.5px solid var(--action);
-            border-right: 1.5px solid var(--action);
-        }
-
-        .crop-mark.bl {
-            bottom: -8px;
-            left: -8px;
-            border-bottom: 1.5px solid var(--action);
-            border-left: 1.5px solid var(--action);
-        }
-
-        .crop-mark.br {
-            bottom: -8px;
-            right: -8px;
-            border-bottom: 1.5px solid var(--action);
-            border-right: 1.5px solid var(--action);
-        }
-
-        /* The four corner marks drift out and back along their diagonals, each
-           all in step, like the card is floating. Slow and small, so it
-           stays a detail. Off for reduced motion. */
-        @keyframes crop-float {
-            0%, 100% { translate: 0 0; }
-            50% { translate: calc(var(--dx) * 5px) calc(var(--dy) * 5px); }
-        }
-
-        .crop-mark.tl { --dx: -1; --dy: -1; }
-        .crop-mark.tr { --dx: 1; --dy: -1; }
-        .crop-mark.bl { --dx: -1; --dy: 1; }
-        .crop-mark.br { --dx: 1; --dy: 1; }
-
-        @media (prefers-reduced-motion: no-preference) {
-            .crop-mark {
-                animation: crop-float 3.2s ease-in-out infinite;
-            }
-
-        }
-
-        /* FAQ answers drop down from the question and lift back on close. */
-        .faq-enter { transition: opacity .22s cubic-bezier(.23, 1, .32, 1), transform .26s cubic-bezier(.23, 1, .32, 1); transform-origin: top; }
-        .faq-leave { transition: opacity .14s ease-out, transform .14s ease-out; transform-origin: top; }
-        .faq-from { opacity: 0; transform: translateY(-8px); }
-        .faq-to { opacity: 1; transform: translateY(0); }
+           ================================================================== */
+        .hm-hero { position: relative; overflow: hidden; padding: 2rem 0 3rem; }
+        @media (min-width: 640px) { .hm-hero { padding-top: 3.5rem; } }
+        @media (min-width: 1024px) { .hm-hero { padding-top: 4.5rem; } }
+        .hm-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; align-items: center; }
+        @media (min-width: 1024px) { .hm-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; } }
+        .hm-hero-copy > * + * { margin-top: 1.5rem; }
+        .hm-status { display: flex; align-items: center; gap: .5rem; font-size: 12px; font-weight: 500; color: var(--h-sky); margin: 0; }
+        .hm-dot { position: relative; display: inline-flex; width: .5rem; height: .5rem; flex-shrink: 0; }
+        .hm-dot::before, .hm-dot::after { content: ""; position: absolute; inset: 0; border-radius: 9999px; background: var(--h-sky); }
+        .hm-dot::before { animation: hm-ping 1.6s cubic-bezier(0, 0, .2, 1) infinite; opacity: .6; }
+        .hm-h1 { margin: 0; font-size: 1.875rem; font-weight: 900; letter-spacing: -.025em; line-height: 1.15; color: var(--h-text); }
+        @media (min-width: 640px) { .hm-h1 { font-size: 3rem; } }
+        @media (min-width: 1024px) { .hm-h1 { font-size: 3.75rem; } }
+        html:lang(km) .hm-h1 { line-height: 1.4; }
+        .hm-h1 span { color: var(--h-sky); }
+        .hm-lead { margin: 0; max-width: 36rem; font-size: 1rem; line-height: 1.65; color: var(--h-muted); }
+        @media (min-width: 640px) { .hm-lead { font-size: 1.125rem; } }
+        html:lang(km) .hm-lead { line-height: 2; }
+        .hm-ctas { display: flex; flex-direction: column; gap: .75rem; padding-top: .5rem; }
+        @media (min-width: 640px) { .hm-ctas { flex-direction: row; align-items: center; } }
+
+        /* ---------- design window ---------- */
+        .hm-art { position: relative; }
+        @media (min-width: 1024px) { .hm-art { margin: 4rem 0; } }
+        .hm-glow { position: absolute; border-radius: 9999px; filter: blur(64px); pointer-events: none; }
+        .hm-glow-a { width: 18rem; height: 18rem; top: -2rem; right: -2rem; background: rgba(24, 119, 242, .15); }
+        .hm-glow-b { width: 14rem; height: 14rem; bottom: -2.5rem; left: -2.5rem; background: rgba(34, 211, 238, .1); }
+        .hm-window { position: relative; background: var(--h-card); border: 1px solid var(--h-line); border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1); overflow: hidden; }
+        .hm-titlebar { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--h-line); background: var(--h-subtle); }
+        .hm-lights { display: flex; gap: .375rem; flex-shrink: 0; }
+        .hm-lights i { width: .75rem; height: .75rem; border-radius: 9999px; display: block; }
+        .hm-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--h-muted); }
+        .hm-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .625rem; border-radius: .5rem; background: var(--h-card); border: 1px solid var(--h-line); font-size: 12px; font-weight: 600; color: var(--h-blue); }
+        html.dark .hm-badge { color: var(--h-sky); }
+        .hm-canvas-pad { padding: .75rem; }
+        @media (min-width: 640px) { .hm-canvas-pad { padding: 1rem; } }
+        .hm-canvas { position: relative; overflow: hidden; background: #111317; border: 1px solid #2E3034; border-radius: .75rem; padding: 1.5rem 1.25rem 1rem; }
+        @media (min-width: 640px) { .hm-canvas { padding-left: 1.5rem; padding-right: 1.5rem; } }
+        .hm-grid-lines { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, #ffffff08 1px, transparent 1px), linear-gradient(to bottom, #ffffff08 1px, transparent 1px); background-size: 24px 24px; }
+        .hm-canvas-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: .5rem; }
+        @media (min-width: 1024px) { .hm-canvas-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; } }
+        .hm-canvas-copy { text-align: center; }
+        @media (min-width: 1024px) { .hm-canvas-copy { text-align: left; } }
+        .hm-canvas-title { margin: 0; font-size: 1.875rem; font-weight: 900; letter-spacing: -.025em; line-height: 1.05; color: #fff; }
+        @media (min-width: 640px) { .hm-canvas-title { font-size: 2.25rem; } }
+        .hm-canvas-sub { margin: .5rem 0 0; font-size: .875rem; color: #CBD5E1; }
+        /* These two are English in both languages, so they keep their tight Latin spacing. */
+        html:lang(km) .hm-body .hm-canvas-title { line-height: 1.05; }
+        html:lang(km) .hm-body .hm-canvas-sub { line-height: 1.5; }
+        .hm-tags { margin-top: .75rem; display: flex; flex-wrap: wrap; justify-content: center; gap: .375rem; }
+        @media (min-width: 1024px) { .hm-tags { flex-direction: column; align-items: flex-start; } }
+        .hm-tag { padding: .125rem .5rem; border-radius: .375rem; font-size: 11px; }
+        .hm-canvas-foot { position: relative; margin-top: .25rem; padding-top: .75rem; border-top: 1px solid rgba(255, 255, 255, .05); display: flex; justify-content: flex-end; }
+        .hm-canvas-foot a { color: var(--h-sky); }
+        .hm-window-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem .75rem; padding: .875rem 1rem; border-top: 1px solid var(--h-line); }
+        @media (min-width: 640px) { .hm-window-foot { padding: .875rem 1.25rem; } }
+        .hm-py { flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--h-blue); background: rgba(24, 119, 242, .1); }
+        .hm-window-foot p { margin: 0; font-size: .875rem; color: var(--h-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hm-window-foot b { color: var(--h-text); font-weight: 600; }
+
+        /* ---------- 3D stage ---------- */
+        .hm-stage { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 15rem; perspective: 1000px; }
+        @media (min-width: 640px) { .hm-stage { height: 16rem; } }
+        .hm-stage-glow { position: absolute; inset: 1.5rem; border-radius: 9999px; filter: blur(40px); background: linear-gradient(to top right, rgba(24, 119, 242, .35), rgba(99, 102, 241, .25), rgba(34, 211, 238, .25)); animation: pulse-glow-3d 4s ease-in-out infinite; }
+        .hm-star { position: absolute; width: 4px; height: 4px; border-radius: 9999px; background: #A5F3FC; box-shadow: 0 0 6px #67E8F9; animation: hm-twinkle 3s ease-in-out infinite; }
+        .hm-ring-tilt { position: absolute; width: 14rem; height: 14rem; border-radius: 9999px; border: 1px solid rgba(129, 140, 248, .2); display: flex; justify-content: center; align-items: flex-start; animation: hm-orbit-reverse 26s linear infinite; }
+        .hm-ring-tilt i { margin-top: -3px; width: 6px; height: 6px; border-radius: 9999px; background: #A5B4FC; box-shadow: 0 0 10px #A5B4FC; }
+        .hm-orbit { position: absolute; width: 12rem; height: 12rem; border-radius: 9999px; border: 1px dashed rgba(77, 163, 255, .4); display: flex; justify-content: center; align-items: flex-start; animation: float-3d-orbit 18s linear infinite; }
+        .hm-orbit i { margin-top: -6px; width: 12px; height: 12px; border-radius: 9999px; background: #22D3EE; box-shadow: 0 0 14px #22D3EE; }
+        .hm-scene { position: relative; width: 14rem; height: 14rem; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; }
+        .hm-cube-shadow { position: absolute; bottom: 1.75rem; width: 6rem; height: 1rem; border-radius: 9999px; background: rgba(24, 119, 242, .45); filter: blur(12px); animation: hm-shadow-breathe 6s ease-in-out infinite; }
+        .hm-cube { position: relative; width: 120px; height: 120px; border-radius: 24px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .15); background: linear-gradient(to bottom right, rgba(43, 58, 92, .95), #151C2B, #0A0D13); box-shadow: 0 24px 50px -12px rgba(24, 119, 242, .55), inset 0 1px 0 rgba(255, 255, 255, .18); transform-style: preserve-3d; animation: float-3d-main 6s ease-in-out infinite; }
+        .hm-cube-grid { position: absolute; inset: 0; background-image: linear-gradient(to right, #ffffff12 1px, transparent 1px), linear-gradient(to bottom, #ffffff12 1px, transparent 1px); background-size: 14px 14px; }
+        .hm-cube-cool { position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(77, 163, 255, .35), transparent 60%); }
+        .hm-cube-warm { position: absolute; inset: 0; background: radial-gradient(circle at 14% 10%, rgba(255, 220, 110, .6), rgba(255, 190, 60, .22) 38%, transparent 68%); animation: hm-warm 3s ease-in-out infinite; }
+        .hm-cube-rim { position: absolute; inset: 0; border-radius: 24px; box-shadow: inset 3px 3px 14px rgba(255, 214, 90, .45); animation: hm-warm 3s ease-in-out infinite; }
+        .hm-cube-sheen { position: absolute; top: 0; bottom: 0; left: 0; width: 33%; background: linear-gradient(to right, transparent, rgba(255, 255, 255, .25), transparent); animation: hm-sheen 4.8s ease-in-out 1s infinite; }
+        .hm-cube-face { position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; }
+        .hm-cube-face svg { width: 2.75rem; height: 2.75rem; color: #6CB6FF; filter: drop-shadow(0 0 12px rgba(77, 163, 255, .85)); }
+        .hm-cube-face span { font-size: 10px; font-weight: 700; letter-spacing: .18em; color: #A5F3FC; text-shadow: 0 0 10px rgba(34, 211, 238, .8), 0 0 14px rgba(255, 214, 90, .45); }
+        .hm-sat { position: absolute; transform-style: preserve-3d; }
+        .hm-sat-sun { top: 1.5rem; left: 1.5rem; z-index: 10; animation: float-3d-icon-b 3.8s ease-in-out .2s infinite; }
+        .hm-sat-figma { top: .5rem; right: 1rem; animation: float-3d-icon-a 4.2s ease-in-out infinite; }
+        .hm-sat-ps { bottom: .75rem; left: 1rem; animation: float-3d-icon-b 4.4s ease-in-out .6s infinite; }
+        .hm-sat-ai { bottom: 1.25rem; right: 1.5rem; animation: float-3d-icon-c 5.4s ease-in-out .8s infinite; }
+        .hm-tile { display: flex; align-items: center; justify-content: center; border-radius: .75rem; font-weight: 800; font-size: 1rem; }
+        .hm-tile-sun { position: relative; width: 2.5rem; height: 2.5rem; background: linear-gradient(to bottom right, #FFE27A, #F5B400); box-shadow: 0 8px 24px -4px rgba(245, 180, 0, .75), 0 0 28px rgba(255, 214, 90, .65); }
+        .hm-tile-figma { width: 3rem; height: 3rem; background: #1E1E1E; border: 1px solid rgba(255, 255, 255, .15); box-shadow: 0 10px 24px -6px rgba(0, 0, 0, .8); }
+        .hm-tile-ps { width: 3rem; height: 3rem; background: #001E36; border: 2px solid rgba(49, 168, 255, .7); box-shadow: 0 0 20px rgba(49, 168, 255, .5); color: #31A8FF; }
+        .hm-tile-ai { width: 2.75rem; height: 2.75rem; background: #330000; border: 2px solid rgba(255, 154, 0, .7); box-shadow: 0 0 20px rgba(255, 154, 0, .5); color: #FF9A00; }
+        /* the yellow tile is a little sun: rays, halo, a beam onto the cube, light motes */
+        .hm-sun-beam { position: absolute; left: 50%; top: 50%; z-index: -1; width: 136px; height: 112px; transform-origin: left center; transform: translateY(-50%) rotate(44deg); clip-path: polygon(0% 42%, 100% 0%, 100% 100%, 0% 58%); background: linear-gradient(90deg, rgba(255, 240, 170, .95) 0%, rgba(255, 214, 90, .55) 30%, rgba(255, 196, 60, .18) 70%, rgba(255, 196, 60, 0) 100%); filter: blur(5px); pointer-events: none; animation: hm-beam 3s ease-in-out infinite; }
+        .hm-sun-motes { position: absolute; left: 50%; top: 50%; z-index: -1; width: 136px; height: 0; transform-origin: left center; transform: rotate(44deg); pointer-events: none; }
+        .hm-sun-motes i { position: absolute; left: 0; width: 6px; height: 6px; border-radius: 9999px; background: #FFF3B0; box-shadow: 0 0 8px #FFD54A; animation: hm-mote 2.7s linear infinite; }
+        .hm-sun-rays { position: absolute; inset: -1.75rem; z-index: -1; border-radius: 9999px; pointer-events: none; background: repeating-conic-gradient(rgba(255, 214, 90, .45) 0deg 5deg, rgba(255, 214, 90, 0) 5deg 22deg); -webkit-mask-image: radial-gradient(circle, #000 28%, transparent 70%); mask-image: radial-gradient(circle, #000 28%, transparent 70%); animation: hm-sun-spin 16s linear infinite; }
+        .hm-sun-halo { position: absolute; inset: -1rem; z-index: -1; border-radius: 9999px; background: rgba(255, 213, 74, .5); filter: blur(24px); pointer-events: none; animation: hm-sun-pulse 3s ease-in-out infinite; }
+
+        /* ---------- floating cards (desktop) ---------- */
+        .hm-floats { display: none; }
+        @media (min-width: 1024px) { .hm-floats { display: block; } }
+        .hm-float { position: absolute; z-index: 20; }
+        .hm-float-progress { top: -56px; left: -2.5rem; animation: hm-float-y 5.5s ease-in-out infinite; }
+        .hm-float-cert { top: 66px; right: -2rem; animation: hm-float-y-sm 4.6s ease-in-out .6s infinite; }
+        .hm-float-project { bottom: 4.25rem; left: -3rem; animation: hm-float-y 6.2s ease-in-out 1.1s infinite; }
+        .hm-float-learning { bottom: -60px; right: -1.5rem; animation: hm-float-y-sm 5s ease-in-out .3s infinite; }
+        .hm-fcard { display: flex; align-items: center; gap: .75rem; padding: .5rem 1rem .5rem .5rem; border-radius: 1rem; background: color-mix(in srgb, var(--h-card) 95%, transparent); backdrop-filter: blur(12px); border: 1px solid var(--h-line); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1); }
+        html.dark .hm-fcard { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .5); }
+        .hm-fcard small { display: block; font-size: 10px; color: var(--h-muted); }
+        .hm-fcard strong { display: block; font-size: 12px; font-weight: 700; color: var(--h-text); }
+        .hm-ring { position: relative; display: flex; align-items: center; justify-content: center; }
+        .hm-ring svg { width: 2.75rem; height: 2.75rem; transform: rotate(-90deg); }
+        .hm-ring circle.track { stroke: #E2E8F0; }
+        html.dark .hm-ring circle.track { stroke: #2E3034; }
+        .hm-ring circle.bar { animation: hm-ring-draw 1.6s cubic-bezier(.22, 1, .36, 1) .3s both; }
+        .hm-ring b { position: absolute; font-size: 10px; font-weight: 700; color: var(--h-text); }
+        .hm-play { position: relative; width: 2.5rem; height: 2.5rem; flex-shrink: 0; border-radius: .75rem; background: var(--h-blue); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(24, 119, 242, .4); }
+        .hm-play::before { content: ""; position: absolute; inset: 0; border-radius: .75rem; background: var(--h-blue); animation: hm-ping-soft 2.2s ease-out infinite; }
+        .hm-play svg { position: relative; }
+        .hm-live { display: flex; align-items: center; gap: .375rem; font-size: 10px; font-weight: 600; color: var(--h-sky); }
+        .hm-live::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: var(--h-sky); animation: hm-pulse 2s ease-in-out infinite; }
+
+        /* ==================================================================
+           JELLY FILTER TABS
+           ================================================================== */
+        .hm-tabs { max-width: 100%; overflow-x: auto; padding: .25rem; border-radius: 1rem; background: var(--h-card); border: 1px solid var(--h-line-soft); box-shadow: var(--h-shadow); scrollbar-width: none; }
+        html.dark .hm-tabs { background: #151B23; border-color: #222936; }
+        .hm-tabs::-webkit-scrollbar { display: none; }
+        .hm-tabs-track { position: relative; display: flex; width: max-content; align-items: center; gap: .25rem; }
+        .hm-tab { position: relative; z-index: 1; flex-shrink: 0; padding: .5rem 1rem; border: 0; border-radius: .75rem; background: transparent; font: inherit; font-size: .875rem; font-weight: 600; white-space: nowrap; color: var(--h-muted); cursor: pointer; transition: color .3s ease; }
+        .hm-tab:hover { color: var(--h-text); }
+        .hm-tab[aria-selected="true"] { color: #fff; }
+        .hm-tab span { display: inline-block; }
+        .hm-tab span.is-pop { animation: hm-label-pop 420ms cubic-bezier(.34, 1.56, .64, 1) both; }
+        .hm-tab:focus-visible { outline: 2px solid var(--h-sky); outline-offset: 1px; }
+        .hm-jelly, .hm-jelly-trail { position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; }
+        .hm-jelly { transition: transform 580ms cubic-bezier(.34, 1.56, .64, 1), width 580ms cubic-bezier(.34, 1.56, .64, 1); }
+        .hm-jelly-trail { border-radius: .75rem; background: rgba(77, 163, 255, .4); filter: blur(12px); transition: transform 860ms cubic-bezier(.22, 1, .36, 1), width 860ms cubic-bezier(.22, 1, .36, 1); }
+        .hm-jelly-blob { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; border-radius: .75rem; background: linear-gradient(to bottom, #5AAEFF, #1877F2); box-shadow: 0 8px 22px -6px rgba(24, 119, 242, .7), inset 0 1px 0 rgba(255, 255, 255, .45); }
+        .hm-jelly-blob::before { content: ""; position: absolute; left: 6px; right: 6px; top: 2px; height: 45%; border-radius: 10px 10px 0 0; background: linear-gradient(to bottom, rgba(255, 255, 255, .4), transparent); }
+        .hm-jelly-blob::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 33%; opacity: 0; background: linear-gradient(to right, transparent, rgba(255, 255, 255, .7), transparent); }
+        .hm-jelly-blob.is-jelly { animation: hm-jelly 620ms cubic-bezier(.25, .9, .3, 1.2) both; }
+        .hm-jelly-blob.is-jelly::after { animation: hm-shimmer 720ms ease-out 120ms both; }
+        .hm-sparks i { position: absolute; left: 50%; top: 50%; margin: -3px 0 0 -3px; width: 6px; height: 6px; border-radius: 9999px; background: #9FD0FF; box-shadow: 0 0 8px #4DA3FF; animation: hm-spark 560ms ease-out 380ms both; }
+        .hm-tabs.is-static .hm-jelly, .hm-tabs.is-static .hm-jelly-trail { transition: none; }
+
+        /* ==================================================================
+           COURSE CARDS
+           ================================================================== */
+        .hm-course-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+        @media (min-width: 768px) { .hm-course-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .hm-course-grid { gap: 2rem; } }
+        .hm-card { position: relative; display: flex; flex-direction: column; overflow: hidden; background: var(--h-card); border: 1px solid var(--h-line); border-radius: 1rem; box-shadow: var(--h-shadow); transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease; }
+        .hm-card:hover { transform: translateY(-4px); border-color: rgba(24, 119, 242, .5); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1); }
+        html.dark .hm-card:hover { border-color: rgba(69, 149, 255, .5); }
+        .hm-card[hidden] { display: none; }
+        .hm-card.is-in { animation: hm-pop-in 420ms cubic-bezier(.22, 1, .36, 1) both; }
+        .hm-cover { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #111317; }
+        .hm-cover img, .hm-cover .hm-cover-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .7s ease-out; }
+        .hm-card:hover .hm-cover img, .hm-card:hover .hm-cover .hm-cover-fallback { transform: scale(1.05); }
+        .hm-cover-fallback { display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--mark-fg) 35%, transparent), transparent 60%), var(--mark-bg); }
+        .hm-cover-fallback span { font-family: 'Archivo Expanded', Inter, sans-serif; font-size: 4.5rem; line-height: 1; font-weight: 900; color: var(--mark-fg); opacity: .9; }
+        @media (max-width: 1279px) {
+            .hm-course-grid .hm-cover { aspect-ratio: 16 / 10; }
+            .hm-cover-fallback { align-items: flex-start; padding-top: 2.75rem; }
+            .hm-cover-fallback span { font-size: 3.25rem; }
+        }
+        @media (max-width: 400px) { .hm-cover-fallback span { opacity: .45; } }
+        .hm-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0, 0, 0, .9), rgba(0, 0, 0, .45), rgba(0, 0, 0, .35)); }
+        .hm-cover-top { position: absolute; top: 0; left: 0; right: 0; padding: 1rem; display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+        .hm-sw { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 22px; padding: 0 .375rem; border-radius: .375rem; font-size: 10px; font-weight: 700; line-height: 1; }
+        .hm-cover-tools { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+        .hm-cat { display: none; padding: .25rem .625rem; border-radius: 9999px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(255, 255, 255, .15); border: 1px solid rgba(255, 255, 255, .2); backdrop-filter: blur(4px); }
+        @media (min-width: 640px) { .hm-cat { display: inline-flex; } }
+        .hm-heart { width: 2.25rem; height: 2.25rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: #fff; background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .25); backdrop-filter: blur(4px); cursor: pointer; transition: all .2s ease; }
+        .hm-heart:hover { background: rgba(0, 0, 0, .5); }
+        .hm-heart:active { transform: scale(.9); }
+        .hm-heart[aria-pressed="true"] { background: #F43F5E; border-color: #FB7185; box-shadow: 0 10px 15px -3px rgba(244, 63, 94, .4); }
+        .hm-heart[aria-pressed="true"] svg { fill: currentColor; }
+        .hm-heart:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .hm-cover-bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 1rem; }
+        @media (min-width: 640px) { .hm-cover-bottom { padding: 1.25rem; } }
+        .hm-cover-bottom h3 { margin: 0; font-size: 1.125rem; font-weight: 800; line-height: 1.25; color: #fff; }
+        @media (min-width: 640px) { .hm-cover-bottom h3 { font-size: 1.25rem; } }
+        html:lang(km) .hm-cover-bottom h3 { line-height: 1.5; }
+        .hm-cover-bottom p { margin: .25rem 0 0; font-size: 11px; color: #CBD5E1; }
+        .hm-meta { margin-top: .625rem; display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .75rem; font-size: 12px; color: #E2E8F0; }
+        .hm-meta span { display: inline-flex; align-items: center; gap: .25rem; }
+        .hm-card-body { display: flex; flex-direction: column; gap: 1rem; flex: 1; padding: 1rem; }
+        @media (min-width: 640px) { .hm-card-body { padding: 1.25rem; } }
+        .hm-person { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+        .hm-person p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hm-person .name { font-size: .875rem; font-weight: 600; color: var(--h-text); }
+        .hm-person .role { font-size: 12px; color: var(--h-muted); }
+        .hm-buy { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: .75rem; padding-top: 1rem; border-top: 1px solid var(--h-line); }
+        .hm-buy small { display: block; font-size: 12px; color: var(--h-muted); }
+        .hm-price { display: flex; align-items: baseline; gap: .5rem; margin: 0; }
+        .hm-price b { font-size: 1.5rem; font-weight: 900; color: var(--h-text); }
+        .hm-price s { font-size: .875rem; color: var(--h-muted); }
+        .hm-off { font-size: 10px; font-weight: 700; padding: .125rem .375rem; border-radius: .375rem; background: rgba(16, 185, 129, .1); color: #059669; }
+        html.dark .hm-off { color: #34D399; }
+        .hm-enroll { flex-shrink: 0; display: inline-flex; align-items: center; gap: .5rem; min-height: 42px; padding: 0 1rem; border-radius: .75rem; background: var(--h-blue); color: #fff; font-size: .875rem; font-weight: 600; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(24, 119, 242, .25); transition: background .2s ease; }
+        .hm-enroll:hover { background: var(--h-navy); }
+        .hm-enroll:hover .hm-arrow { transform: translateX(4px); }
+        .hm-empty { padding: 4rem 0; text-align: center; color: var(--h-muted); }
+
+        /* ==================================================================
+           INSTRUCTOR
+           ================================================================== */
+        .hm-teacher { border-radius: 1.5rem; background: var(--h-card); border: 1px solid var(--h-line); padding: 1.5rem; box-shadow: var(--h-shadow); }
+        @media (min-width: 640px) { .hm-teacher { padding: 2.5rem; } }
+        @media (min-width: 1024px) { .hm-teacher { padding: 3rem; } }
+        .hm-teacher-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
+        @media (min-width: 1024px) { .hm-teacher-grid { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 3rem; } }
+        .hm-teacher-left { display: flex; flex-direction: column; align-items: center; }
+        .hm-portrait { position: relative; }
+        .hm-portrait .hm-avatar { width: 14rem; height: 14rem; border: 2px solid #E2E8F0; }
+        html.dark .hm-portrait .hm-avatar { border-color: #2B3545; }
+        @media (min-width: 640px) { .hm-portrait .hm-avatar { width: 16rem; height: 16rem; } }
+        .hm-lecturer { position: absolute; bottom: -1.25rem; left: 50%; transform: translateX(-50%); width: max-content; max-width: 260px; display: flex; align-items: center; gap: .625rem; padding: .5rem .75rem; border-radius: .75rem; background: var(--h-card); border: 1px solid var(--h-line); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1); }
+        html.dark .hm-lecturer { background: #151B23; }
+        @media (min-width: 640px) { .hm-lecturer { left: auto; right: -1.5rem; transform: none; } }
+        .hm-lecturer .ic { width: 2rem; height: 2rem; flex-shrink: 0; border-radius: .5rem; display: flex; align-items: center; justify-content: center; color: var(--h-blue); background: rgba(24, 119, 242, .1); }
+        .hm-lecturer b { display: block; font-size: 12px; color: var(--h-text); }
+        .hm-lecturer span { display: block; font-size: 11px; color: var(--h-muted); }
+        .hm-stats { margin-top: 2.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; width: 100%; max-width: 20rem; }
+        .hm-stat { border-radius: 1rem; border: 1px solid var(--h-line); background: var(--h-subtle); padding: 1rem; text-align: center; }
+        .hm-stat b { display: block; font-size: 1.25rem; font-weight: 700; color: var(--h-text); }
+        .hm-stat span { display: block; margin-top: .125rem; font-size: 12px; color: var(--h-muted); }
+        .hm-teacher-right > * + * { margin-top: 1.5rem; }
+        .hm-teacher-name { margin: .5rem 0 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -.02em; line-height: 1.45; color: var(--h-text); }
+        @media (min-width: 640px) { .hm-teacher-name { font-size: 2.25rem; } }
+        .hm-teacher-name span { color: var(--h-blue); }
+        html.dark .hm-teacher-name span { color: var(--h-sky); }
+        .hm-role { margin: .5rem 0 0; font-size: .875rem; color: var(--h-muted); }
+        @media (min-width: 640px) { .hm-role { font-size: 1rem; } }
+        .hm-quote { margin: 0; border-left: 2px solid var(--h-sky); padding-left: 1rem; font-style: italic; font-size: 15px; line-height: 1.65; color: var(--h-quote); }
+        html:lang(km) .hm-quote { line-height: 2; }
+        .hm-skills-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
+        .hm-skills-head h3 { margin: 0; display: flex; align-items: center; gap: .5rem; font-size: 1rem; font-weight: 700; color: var(--h-text); }
+        .hm-pill-count { flex-shrink: 0; font-size: 11px; font-weight: 600; padding: .25rem .625rem; border-radius: 9999px; color: var(--h-blue); background: rgba(24, 119, 242, .1); }
+        .hm-skills { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: .625rem; }
+        @media (min-width: 640px) { .hm-skills { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        .hm-skill { display: flex; align-items: center; justify-content: space-between; gap: .625rem; padding: .625rem .75rem; border-radius: 1rem; background: #F8FAFC; border: 1px solid rgba(226, 232, 240, .8); transition: all .2s ease; }
+        .hm-skill:hover { background: #fff; border-color: rgba(77, 163, 255, .5); box-shadow: var(--h-shadow); }
+        html.dark .hm-skill { background: #151B23; border-color: #222936; }
+        html.dark .hm-skill:hover { background: #1C232D; border-color: rgba(77, 163, 255, .5); }
+        .hm-skill .t { display: flex; align-items: center; gap: .625rem; min-width: 0; font-size: .875rem; font-weight: 500; line-height: 1.35; color: var(--h-text); }
+        .hm-skill .e { font-size: 1.125rem; line-height: 1; transition: transform .2s ease; }
+        .hm-skill:hover .e { transform: scale(1.1); }
+        .hm-skill .g { flex-shrink: 0; font-size: 10px; font-weight: 600; padding: .125rem .5rem; border-radius: .375rem; background: #fff; border: 1px solid #E2E8F0; color: var(--h-muted); }
+        html.dark .hm-skill .g { background: #0B0F14; border-color: #222936; }
+        .hm-trust-row { padding-top: 1.25rem; border-top: 1px solid var(--h-line); display: flex; flex-direction: column; gap: 1rem; }
+        @media (min-width: 1280px) { .hm-trust-row { flex-direction: row; align-items: center; justify-content: space-between; } }
+        .hm-trust { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; }
+        .hm-trust li { display: flex; align-items: center; gap: .375rem; font-size: .875rem; color: var(--h-muted); }
+        .hm-trust svg { color: var(--h-blue); }
+        html.dark .hm-trust svg { color: var(--h-sky); }
+
+        /* ==================================================================
+           SHOWCASE
+           ================================================================== */
+        .hm-show-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+        @media (min-width: 640px) { .hm-show-grid { gap: 2rem; } }
+        @media (min-width: 768px) { .hm-show-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .hm-show-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .hm-show { cursor: pointer; text-align: left; }
+        .hm-show:focus-visible { outline: 2px solid var(--h-sky); outline-offset: 2px; }
+        .hm-show .hm-cover { aspect-ratio: 16 / 10; }
+        .hm-show-shade { position: absolute; top: 0; left: 0; right: 0; height: 5rem; background: linear-gradient(to bottom, rgba(0, 0, 0, .5), transparent); }
+        .hm-show-top { position: absolute; z-index: 2; top: 0; left: 0; right: 0; padding: .875rem; display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+        .hm-award { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .625rem; border-radius: .5rem; background: rgba(0, 0, 0, .6); border: 1px solid rgba(255, 255, 255, .15); backdrop-filter: blur(4px); font-size: 11px; font-weight: 600; color: #FCD34D; }
+        .hm-like { display: inline-flex; align-items: center; gap: .375rem; height: 2rem; padding: 0 .625rem; border-radius: 9999px; border: 1px solid rgba(255, 255, 255, .25); background: rgba(0, 0, 0, .35); backdrop-filter: blur(4px); color: #fff; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s ease; }
+        .hm-like:hover { background: rgba(0, 0, 0, .55); }
+        .hm-like:active { transform: scale(.9); }
+        .hm-like[aria-pressed="true"] { background: #F43F5E; border-color: #FB7185; box-shadow: 0 10px 15px -3px rgba(244, 63, 94, .4); }
+        .hm-like[aria-pressed="true"] svg { fill: currentColor; }
+        .hm-show-hover { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: flex; align-items: flex-end; justify-content: space-between; gap: .5rem; padding: .875rem; opacity: 0; background: linear-gradient(to top, rgba(0, 0, 0, .85), rgba(0, 0, 0, .4), transparent); transition: opacity .3s ease; }
+        .hm-show:hover .hm-show-hover, .hm-show:focus-visible .hm-show-hover { opacity: 1; }
+        .hm-inspect { display: inline-flex; align-items: center; gap: .375rem; padding: .5rem .75rem; border-radius: .75rem; background: #fff; color: #1C1C1E; font-size: 12px; font-weight: 700; transform: translateY(8px); transition: transform .3s ease; }
+        .hm-show:hover .hm-inspect { transform: translateY(0); }
+        .hm-grade { padding: .375rem .625rem; border-radius: .5rem; background: var(--h-blue); color: #fff; font-size: 11px; font-weight: 700; }
+        .hm-show-body { display: flex; flex-direction: column; gap: .75rem; flex: 1; padding: 1rem; }
+        @media (min-width: 640px) { .hm-show-body { padding: 1.25rem; } }
+        .hm-course-tag { margin: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--h-sky); }
+        .hm-show-body h3 { margin: 0; font-size: 1.0625rem; font-weight: 700; line-height: 1.35; color: var(--h-text); }
+        .hm-show-body .kh { margin: .125rem 0 0; font-size: .875rem; color: var(--h-muted); }
+        .hm-clamp { margin: 0; font-size: .875rem; line-height: 1.6; color: var(--h-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .hm-show-foot { margin-top: auto; padding-top: .75rem; border-top: 1px solid var(--h-line); display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+        .hm-student-img { width: 2.25rem; height: 2.25rem; border-radius: 9999px; object-fit: cover; flex-shrink: 0; }
+        .hm-tools { display: flex; align-items: center; gap: .25rem; flex-shrink: 0; }
+        .hm-tool { padding: .125rem .375rem; border-radius: .375rem; font-size: 10px; background: var(--h-chip); border: 1px solid var(--h-line-soft); color: var(--h-muted); }
+
+        /* ---------- project modal ---------- */
+        .hm-modal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .8); backdrop-filter: blur(12px); animation: hm-fade-in .2s ease-out both; }
+        .hm-modal[hidden] { display: none; }
+        @media (min-width: 640px) { .hm-modal { padding: 1.5rem; } }
+        .hm-dialog { display: flex; flex-direction: column; width: 100%; max-width: 56rem; max-height: 90vh; overflow: hidden; border-radius: 1.5rem; background: #fff; border: 1px solid #E2E8F0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .25); color: var(--h-text); animation: hm-zoom-in .2s cubic-bezier(.16, 1, .3, 1) both; }
+        html.dark .hm-dialog { background: #151B23; border-color: #2E3034; }
+        .hm-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--h-line); }
+        .hm-dialog-head h2 { margin: 0; font-size: 1.125rem; font-weight: 700; line-height: 1.35; }
+        .hm-dialog-sub { margin-top: .25rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .875rem; color: var(--h-muted); }
+        .hm-verified { display: inline-flex; align-items: center; gap: .25rem; padding: .125rem .5rem; border-radius: 9999px; background: rgba(16, 185, 129, .1); color: #059669; font-size: 11px; font-weight: 600; }
+        html.dark .hm-verified { color: #34D399; }
+        .hm-dialog-actions { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+        .hm-share { display: inline-flex; align-items: center; gap: .375rem; height: 2.25rem; padding: 0 .75rem; border-radius: .75rem; border: 1px solid var(--h-line); background: var(--h-chip); color: var(--h-text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s ease; }
+        .hm-share.is-copied { background: #10B981; border-color: #10B981; color: #fff; }
+        .hm-close { width: 2.25rem; height: 2.25rem; border-radius: .75rem; border: 0; background: transparent; color: var(--h-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .hm-close:hover { background: var(--h-chip); color: var(--h-text); }
+        .hm-dialog-body { overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem; }
+        @media (min-width: 640px) { .hm-dialog-body { padding: 1.5rem; } }
+        .hm-dialog-body > * + * { margin-top: 1.5rem; }
+        .hm-shot { position: relative; aspect-ratio: 16 / 9; border-radius: 1rem; overflow: hidden; background: #111317; border: 1px solid var(--h-line); }
+        .hm-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .hm-shot .hm-grade { position: absolute; right: .75rem; bottom: .75rem; font-size: 12px; }
+        .hm-dialog-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 768px) { .hm-dialog-grid { grid-template-columns: 1fr 2fr; } }
+        .hm-idcard { border-radius: 1rem; border: 1px solid var(--h-line); background: var(--h-subtle); padding: 1rem; }
+        html.dark .hm-idcard { background: #11161D; }
+        .hm-dl { margin: 1rem 0 0; display: grid; gap: .625rem; font-size: .875rem; }
+        .hm-dl div { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+        .hm-dl dt { color: var(--h-muted); }
+        .hm-dl dd { margin: 0; font-weight: 600; }
+        .hm-dl .award { display: inline-flex; align-items: center; gap: .25rem; color: #D97706; }
+        html.dark .hm-dl .award { color: #FCD34D; }
+        .hm-mini-like { display: inline-flex; align-items: center; gap: .25rem; padding: .125rem .5rem; border-radius: 9999px; border: 0; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; background: rgba(244, 63, 94, .1); color: #E11D48; }
+        .hm-mini-like[aria-pressed="true"] { background: #F43F5E; color: #fff; }
+        .hm-mini-like[aria-pressed="true"] svg { fill: currentColor; }
+        .hm-small-head { margin: 0 0 .5rem; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--h-muted); }
+        .hm-concept h3 { margin: 0 0 .5rem; font-size: .875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--h-sky); }
+        .hm-concept p { margin: 0; font-size: 15px; line-height: 1.65; color: var(--h-quote); }
+        .hm-critique { margin-top: 1.25rem; border-radius: 1rem; border: 1px solid rgba(24, 119, 242, .25); background: rgba(24, 119, 242, .06); padding: 1rem 1.25rem; }
+        html.dark .hm-critique { background: rgba(24, 119, 242, .1); }
+        .hm-critique-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+        .hm-critique-head b { font-size: 1.25rem; font-weight: 700; color: var(--h-blue); }
+        html.dark .hm-critique-head b { color: var(--h-sky); }
+        .hm-critique p.q { margin: .75rem 0 0; font-style: italic; font-size: 15px; line-height: 1.65; color: var(--h-text); }
+
+        /* ==================================================================
+           FOOTER
+           ================================================================== */
+        .hm-footer { border-top: 1px solid var(--h-line); background: #fff; padding: 3rem 0; transition: background-color .3s ease; }
+        html.dark .hm-footer { background: #0B0F14; border-color: #1E2530; }
+        @media (min-width: 1024px) { .hm-footer { padding: 4rem 0; } }
+        .hm-footer-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+        @media (min-width: 640px) { .hm-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .hm-footer-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3rem; } }
+        .hm-footer-grid > div > * + * { margin-top: .75rem; }
+        .hm-wordmark { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -.025em; color: var(--h-text); }
+        .hm-wordmark span { color: var(--h-blue); }
+        html.dark .hm-wordmark span { color: var(--h-sky); }
+        .hm-footer p { margin: 0; font-size: .875rem; line-height: 1.65; color: var(--h-muted); }
+        .hm-footer .motto { color: var(--h-sky); }
+        .hm-fhead { margin: 0 0 1rem; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--h-text); }
+        .hm-flinks { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+        .hm-flinks a, .hm-flinks button { padding: 0; border: 0; background: none; font: inherit; font-size: .875rem; color: var(--h-muted); text-decoration: none; text-align: left; cursor: pointer; transition: color .2s ease; }
+        .hm-flinks a:hover, .hm-flinks button:hover { color: var(--h-blue); }
+        html.dark .hm-flinks a:hover, html.dark .hm-flinks button:hover { color: var(--h-sky); }
+        .hm-footer-bar { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--h-line); display: flex; flex-direction: column; gap: .75rem; }
+        html.dark .hm-footer-bar { border-color: #1E2530; }
+        @media (min-width: 640px) { .hm-footer-bar { flex-direction: row; align-items: center; justify-content: space-between; } }
+        .hm-footer-bar p { font-size: 12px; }
+
+        /* ---------- floating language / theme pill ---------- */
+        .hm-prefs { position: fixed; z-index: 45; right: max(.75rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom)); display: flex; align-items: center; padding: .25rem; border-radius: 9999px; background: color-mix(in srgb, var(--h-card) 90%, transparent); backdrop-filter: blur(12px); border: 1px solid var(--h-line); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1); }
+        @media (min-width: 640px) { .hm-prefs { right: 1.25rem; bottom: 1.5rem; } }
+        html.dark .hm-prefs { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .4); }
+        .hm-prefs form { display: flex; }
+        .hm-pref { display: inline-flex; align-items: center; gap: .375rem; height: 2.25rem; padding: 0 .75rem; border: 0; border-radius: 9999px; background: transparent; font: inherit; font-size: 12px; font-weight: 600; color: var(--h-text); cursor: pointer; transition: background .2s ease; }
+        .hm-pref:hover { background: #F1F5F9; }
+        html.dark .hm-pref:hover { background: #262A31; }
+        .hm-pref:focus-visible { outline: 2px solid var(--h-sky); outline-offset: 1px; }
+        .hm-pref-divider { width: 1px; height: 1.25rem; background: var(--h-line); }
+        .hm-flag { width: 1.25rem; height: 13px; border-radius: 3px; box-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
+        .hm-spin-in { animation: hm-icon-spin 420ms cubic-bezier(.34, 1.56, .64, 1) both; }
+
+        .hm-toast { position: fixed; z-index: 80; left: 50%; bottom: 5.5rem; transform: translateX(-50%); display: inline-flex; align-items: center; gap: .5rem; padding: .625rem 1rem; border-radius: 9999px; background: #1C1C1E; color: #fff; font-size: .875rem; font-weight: 600; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .2); animation: hm-toast-in 220ms ease-out both; }
+        .hm-toast[hidden] { display: none; }
+        html.dark .hm-toast { background: #F5F5F7; color: #1C1C1E; }
+
+        /* ==================================================================
+           KEYFRAMES
+           ================================================================== */
+        @keyframes float-3d-main { 0%, 100% { transform: translateY(0) rotateX(8deg) rotateY(-10deg) scale(1); } 50% { transform: translateY(-10px) rotateX(14deg) rotateY(-4deg) scale(1.02); } }
+        @keyframes float-3d-orbit { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes float-3d-icon-a { 0%, 100% { transform: translateY(0) rotate(4deg) translateZ(20px); } 50% { transform: translateY(-8px) rotate(-3deg) translateZ(35px); } }
+        @keyframes float-3d-icon-b { 0%, 100% { transform: translateY(0) rotate(-8deg) translateZ(15px); } 50% { transform: translateY(9px) rotate(3deg) translateZ(25px); } }
+        @keyframes float-3d-icon-c { 0%, 100% { transform: translateY(0) rotate(10deg) translateZ(25px); } 50% { transform: translateY(-6px) rotate(16deg) translateZ(40px); } }
+        @keyframes pulse-glow-3d { 0%, 100% { opacity: .35; transform: scale(.92); } 50% { opacity: .75; transform: scale(1.1); } }
+        @keyframes hm-float-y { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes hm-float-y-sm { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes hm-sheen { 0% { transform: translateX(-160%) skewX(-18deg); } 55%, 100% { transform: translateX(320%) skewX(-18deg); } }
+        @keyframes hm-twinkle { 0%, 100% { opacity: .15; transform: scale(.6); } 50% { opacity: 1; transform: scale(1); } }
+        @keyframes hm-shadow-breathe { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(.8); opacity: .28; } }
+        @keyframes hm-orbit-reverse { from { transform: rotateX(68deg) rotate(360deg); } to { transform: rotateX(68deg) rotate(0deg); } }
+        @keyframes hm-ring-draw { from { stroke-dashoffset: 113.1; } }
+        @keyframes hm-ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+        @keyframes hm-ping-soft { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.9); opacity: 0; } }
+        @keyframes hm-pulse { 50% { opacity: .4; } }
+        @keyframes hm-sun-spin { to { transform: rotate(360deg); } }
+        @keyframes hm-sun-pulse { 0%, 100% { opacity: .55; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.15); } }
+        @keyframes hm-beam { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
+        @keyframes hm-warm { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+        @keyframes hm-mote { 0% { transform: translateX(14px) scale(.6); opacity: 0; } 18% { opacity: 1; } 100% { transform: translateX(118px) scale(1); opacity: 0; } }
+        @keyframes hm-jelly { 0% { transform: scale(1, 1); } 20% { transform: scale(1.22, .78); } 40% { transform: scale(.88, 1.12); } 58% { transform: scale(1.07, .94); } 76% { transform: scale(.98, 1.03); } 100% { transform: scale(1, 1); } }
+        @keyframes hm-shimmer { 0% { opacity: 1; transform: translateX(-120%) skewX(-20deg); } 100% { opacity: 1; transform: translateX(340%) skewX(-20deg); } }
+        @keyframes hm-label-pop { 0% { transform: scale(1); } 40% { transform: scale(1.09); } 100% { transform: scale(1); } }
+        @keyframes hm-spark { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+        @keyframes hm-icon-spin { from { transform: rotate(-120deg) scale(.4); opacity: 0; } to { transform: rotate(0) scale(1); opacity: 1; } }
+        @keyframes hm-pop-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+        @keyframes hm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes hm-zoom-in { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes hm-toast-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
         @media (prefers-reduced-motion: reduce) {
-            .faq-enter, .faq-leave { transition: opacity .15s linear; }
-            .faq-from { transform: none; }
-        }
-
-        /* Pinned-proof feel on a couple of catalogue tiles */
-        .pin {
-            position: absolute;
-            top: -9px;
-            left: 24px;
-            width: 13px;
-            height: 13px;
-            border-radius: 50%;
-            background: var(--action);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, .35), inset 0 -2px 3px rgba(0, 0, 0, .25);
-        }
-
-        .course-tile {
-            transition: background-color .2s ease, color .2s ease, border-color .2s ease, transform .25s ease;
-        }
-
-        .course-tile:nth-child(3n+1) {
-            transform: rotate(-.6deg);
-        }
-
-        .course-tile:nth-child(3n+2) {
-            transform: rotate(.45deg);
-        }
-
-        .course-tile:nth-child(3n+3) {
-            transform: rotate(-.3deg);
-        }
-
-        .course-tile:hover {
-            background: var(--ink) !important;
-            color: var(--paper) !important;
-            border-color: transparent !important;
-            transform: rotate(0deg) translateY(-3px);
-        }
-
-        /* The promotion bar above the menu is .promo-* in resources/css/app.css. The
-           hero fills the first screen, so with the bar showing it gives up that height. */
-        html.has-promo .stage {
-            min-height: max(560px, calc(100vh - 64px - 52px));
-            min-height: max(560px, calc(100svh - 64px - 52px));
-        }
-
-        html.has-promo.promo-dismissed .stage {
-            min-height: max(560px, calc(100svh - 64px));
-        }
-
-        /* The brand lockup (logo + wordmark) is components/brand, styled in app.css. */
-
-        /* Nav slides away while scrolling down, and comes back on any scroll up */
-        #site-nav {
-            transition: transform .35s cubic-bezier(.19, 1, .22, 1);
-        }
-
-        #site-nav.nav-hidden {
-            transform: translateY(-100%);
-        }
-
-        .nav-link {
-            position: relative;
-        }
-
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: -6px;
-            height: 1px;
-            background: currentColor;
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform .3s ease;
-        }
-
-        .nav-link:hover::after,
-        .nav-link:focus-visible::after {
-            transform: scaleX(1);
-        }
-
-        /* Typing caret for the testimonial */
-        .type-caret {
-            display: inline-block;
-            width: 2px;
-            height: .95em;
-            margin-left: 4px;
-            vertical-align: -.1em;
-            background: var(--action);
-            animation: caret-blink 1s steps(1, end) infinite;
-        }
-
-        .type-caret.is-done {
-            animation: caret-fade .9s ease forwards;
-        }
-
-        @keyframes caret-blink {
-
-            0%,
-            50% {
-                opacity: 1;
-            }
-
-            50.01%,
-            100% {
-                opacity: 0;
-            }
-        }
-
-        @keyframes caret-fade {
-            to {
-                opacity: 0;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-
-            /* Every entrance on this page (intro, wordmark, portrait, chip, fan,
-               scroll reveals) only animates FROM a starting pose, so removing the
-               animations leaves each element in its finished, on-screen state. */
-            * {
-                transition: none !important;
-                animation: none !important;
-            }
-
-            .intro {
-                display: none !important;
+            .hm-body *, .hm-body *::before, .hm-body *::after {
+                animation-duration: .001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .001ms !important;
             }
         }
     </style>
 </head>
 
-<body class="antialiased" style="background:var(--paper); color:var(--ink);">
+@php
+    $hmKm = app()->getLocale() === 'km';
+    // Home copy in both languages, kept on this page so no shared file changes.
+    $L = fn (string $en, string $km) => $hmKm ? $km : $en;
+
+    // Adobe-style colours for a course's short mark (Ps, Ai, Id ...).
+    $hmMarks = [
+        'ps' => ['#001E36', '#31A8FF'], 'ai' => ['#330000', '#FF9A00'], 'id' => ['#49021F', '#FF3366'],
+        'pr' => ['#00005B', '#9999FF'], 'ae' => ['#00005B', '#9999FF'], 'mo' => ['#00005B', '#9999FF'],
+        'xd' => ['#470137', '#FF61F6'], 'fg' => ['#1E1E1E', '#0ACF83'], 'au' => ['#00242B', '#00E4BB'],
+        'dw' => ['#072401', '#4AFF99'],
+    ];
+    $hmCycle = array_keys($hmMarks);
+
+    $hmCourses = collect($courses ?? [])->values();
+    $hmCategories = $hmCourses->pluck('category')->filter()->unique()->values();
+
+    $hmSkills = [
+        ['🎨', 'ការរចនាម៉ាកសញ្ញា & Branding', 'Branding'],
+        ['🎬', 'Motion Graphics & Animation', 'Motion'],
+        ['📱', 'UI/UX Design & Figma Systems', 'UI/UX'],
+        ['📢', 'Social Media Campaign Visuals', 'Social Media'],
+        ['📦', 'Packaging & Print Production', 'Packaging'],
+        ['🎥', 'Video & Visual Content Editing', 'Production'],
+        ['🤖', 'AI for Design & Studio Workflows', 'AI Design'],
+        ['🎓', 'ការបង្រៀន Graphic & Motion Design', 'Teaching'],
+        ['💡', 'Design Thinking & Creative Direction', 'Strategy'],
+        ['⚡', 'Adobe Photoshop, Illustrator, InDesign, AE', 'Software'],
+    ];
+
+    $hmProjects = [
+        [
+            'id' => 'sw-1', 'studentName' => 'Dara Somnang', 'studentNameKh' => 'ដារ៉ា សំណាង',
+            'studentAvatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+            'course' => 'Graphic Design', 'title' => 'Angkor Heritage Minimalist Identity', 'titleKh' => 'អត្តសញ្ញាណប្រណិតភាពអង្គរទំនើប',
+            'image' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80',
+            'likes' => 142, 'badge' => "Teacher's Choice", 'tools' => ['Illustrator', 'InDesign', 'Photoshop'], 'grade' => '9.8 / 10',
+            'description' => 'A modern minimalist brand identity and packaging system celebrating classical Angkorian architectural proportions and traditional Khmer stone carvings.',
+            'teacherCritique' => 'Outstanding optical balance between the modern sans-serif type and traditional Khmer display font. Grid proportion is exemplary.',
+        ],
+        [
+            'id' => 'sw-2', 'studentName' => 'Bopha Vann', 'studentNameKh' => 'បុប្ផា វ៉ាន់',
+            'studentAvatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
+            'course' => 'UX/UI Design', 'title' => 'Phnom Penh Urban Transit UI Kit', 'titleKh' => 'ប្រព័ន្ធកក់សំបុត្រ និង UI Kit ធ្វើដំណើររាជធានី',
+            'image' => 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80',
+            'likes' => 198, 'badge' => 'Featured Project', 'tools' => ['Figma', 'FigJam', 'Protopie'], 'grade' => '9.6 / 10',
+            'description' => 'Clean mobile ticketing and real-time bus navigation application designed for Phnom Penh commuters with full Khmer localized typography and dark mode support.',
+            'teacherCritique' => 'Superb design token structure and auto-layout discipline. Micro-interactions for route tracking are smooth and intuitive.',
+        ],
+        [
+            'id' => 'sw-3', 'studentName' => 'Rithy Kem', 'studentNameKh' => 'រិទ្ធី កែម',
+            'studentAvatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+            'course' => 'Motion Graphics', 'title' => 'Kinetic Khmer Calligraphy Showreel', 'titleKh' => 'ចលនាអក្សរផ្ចង់ខ្មែរ Kinetic Calligraphy',
+            'image' => 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80',
+            'likes' => 215, 'badge' => 'Top Honors', 'tools' => ['After Effects', 'Cinema 4D', 'Illustrator'], 'grade' => '9.9 / 10',
+            'description' => 'Dynamic 3D typography motion reel exploring traditional Khmer calligraphy morphing into contemporary geometric spatial forms with fluid rhythm.',
+            'teacherCritique' => 'Masterful easing curves and secondary overshoot physics. Setting a new benchmark for motion typography in Cambodia.',
+        ],
+        [
+            'id' => 'sw-4', 'studentName' => 'Channary Pich', 'studentNameKh' => 'ចាន់ណារី ពេជ្រ',
+            'studentAvatar' => 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80',
+            'course' => 'Graphic Design', 'title' => 'Mondulkiri Specialty Coffee Packaging', 'titleKh' => 'ការរចនាកញ្ចប់កាហ្វេពិសេសមណ្ឌលគិរី',
+            'image' => 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=80',
+            'likes' => 167, 'badge' => 'Distinction', 'tools' => ['Illustrator', 'Photoshop'], 'grade' => '9.5 / 10',
+            'description' => 'Sustainable eco-friendly packaging series capturing the misty highlands of Mondulkiri with custom illustrated botanicals and tactile gold foil accents.',
+            'teacherCritique' => 'The hierarchy between brand mark, origin story, and brew specs is masterfully balanced. Print-ready execution.',
+        ],
+    ];
+
+    $hmTeacher = 'Piseth Yoeurn';
+    $hmTeacherKh = 'យឿន ពិសិដ្ឋ';
+    $hmStartUrl = auth()->check() ? route('learning.index') : route('register');
+
+    // Words the page script shows (share button, toast, like button).
+    $hmText = [
+        'copied' => $L('Copied Link!', 'បានចម្លងតំណ!'),
+        'share' => $L('Share', 'ចែករំលែក'),
+        'copiedToast' => $L('Project link copied to clipboard', 'បានចម្លងតំណគម្រោងរួចរាល់'),
+        'copyFailed' => $L('Could not copy the link', 'មិនអាចចម្លងតំណបានទេ'),
+        'like' => $L('Like this project', 'ចូលចិត្តគម្រោងនេះ'),
+        'unlike' => $L('Unlike this project', 'ឈប់ចូលចិត្ត'),
+    ];
+@endphp
+
+<body class="antialiased hm-body">
 
     <div
         x-data="{
@@ -1173,13 +690,11 @@
                 const next = !this.dark;
                 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-                /* Where the wipe starts: the button you actually clicked.
-                   Falls back to the top-right corner for keyboard activation. */
+                /* Where the wipe starts: the button you actually clicked. */
                 const x = (e && e.clientX) ? e.clientX : window.innerWidth - 60;
                 const y = (e && e.clientY) ? e.clientY : 50;
 
                 if (!reduce) {
-                    /* Radius needed to cover the furthest corner of the viewport */
                     const r = Math.hypot(
                         Math.max(x, window.innerWidth - x),
                         Math.max(y, window.innerHeight - y)
@@ -1190,13 +705,11 @@
                     ripple.style.left = x + 'px';
                     ripple.style.top = y + 'px';
                     ripple.style.setProperty('--r', r + 'px');
-                    /* Paint the colour we are moving INTO, so the swap happens behind it */
-                    ripple.style.background = next ? '#0A0A0A' : '#FFFFFF';
+                    ripple.style.background = next ? '#0B0B0D' : '#F5F7FA';
                     document.body.appendChild(ripple);
                     setTimeout(() => ripple.remove(), 700);
                 }
 
-                /* Flip the theme once the wipe has covered the screen */
                 setTimeout(() => {
                     this.dark = next;
                     document.documentElement.classList.toggle('dark', next);
@@ -1207,968 +720,851 @@
                 setTimeout(() => { this.announce = ''; }, 2000);
             }
         }">
-        {{-- Faint paper grain — reinforces the print/proof material instead of a flat vector gradient --}}
-        <div class="paper-grain fixed inset-0 z-[60] pointer-events-none" aria-hidden="true"
-            style="opacity:.045; mix-blend-mode:overlay; background-repeat:repeat; background-size:120px 120px; background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'/%3E%3C/svg%3E);"></div>
 
         {{-- Screen readers still hear the mode change --}}
-        <div class="sr-only" role="status" aria-live="polite" x-text="announce"></div>
+        <div class="hm-sr" role="status" aria-live="polite" x-text="announce"></div>
 
-        <!-- Nav: the bar shared with every classroom page -->
-        {{-- The live promotion, above the menu (it is also pinned in the Courses section below). --}}
+        {{-- The live promotion sits above the menu; the menu is the bar shared with every page. --}}
         @include('partials._promo')
 
         @include('partials._site-nav')
 
-        <!-- ===================================================================
-             HERO. A short headline, then the course cards fanned out in an arc.
-             The fan sways left and right on its own, follows the page scroll,
-             and can be dragged, swiped, or stepped with the arrow buttons.
-             =================================================================== -->
-        @php
-        // One plain array per card. Real courses are used when the database has any;
-        // otherwise placeholder cards are shown so the hero is never empty.
-        // Adobe app colours: [card background, big letters]. Looked up by the course's
-        // short mark (Ps, Ai, Id...). Unknown marks cycle through the list below.
-        $adobeColors = [
-        'ps' => ['#001E36', '#31A8FF'], // Photoshop
-        'ai' => ['#330000', '#FF9A00'], // Illustrator
-        'id' => ['#49021F', '#FF3366'], // InDesign
-        'pr' => ['#00005B', '#9999FF'], // Premiere Pro
-        'ae' => ['#00005B', '#9999FF'], // After Effects
-        'mo' => ['#00005B', '#9999FF'], // Motion Graphics -> After Effects
-        'xd' => ['#470137', '#FF61F6'], // XD
-        'fg' => ['#470137', '#FF61F6'], // Figma / UI-UX -> XD
-        'au' => ['#00242B', '#00E4BB'], // Audition
-        'dw' => ['#072401', '#4AFF99'], // Dreamweaver
-        'aa' => ['#EB1000', '#FFFFFF'], // Adobe red
-        ];
-        $adobeCycle = ['ps', 'ai', 'id', 'pr', 'xd', 'au', 'dw'];
+        <main class="hm-main">
 
-        $cards = collect($courses ?? [])->map(function ($c, $n) use ($adobeColors, $adobeCycle) {
-        $pick = $adobeColors[strtolower(trim((string) $c->mark))] ?? $adobeColors[$adobeCycle[$n % count($adobeCycle)]];
-        return [
-        'mark' => $c->mark,
-        'title' => $c->localized('title'),
-        'meta' => __($c->level) . ' · ' . __(':count lessons', ['count' => $c->lessons_count]),
-        'badge' => $c->isFree() ? __('Free') : $c->priceLabel(),
-        // A live promotion: the badge shows the regular price struck through and today's price.
-        'sale' => $c->isOnSale() ? $c->salePriceLabel() : null,
-        'bg' => $pick[0],
-        'fg' => $pick[1],
-        'url' => route('courses.show', $c),
-        ];
-        })->values();
+            {{-- ============================== HERO ============================== --}}
+            <section class="hm-hero" aria-labelledby="hm-hero-title">
+                <div class="hm-wrap hm-hero-grid">
+                    <div class="hm-hero-copy">
+                        <p class="hm-status"><span class="hm-dot" aria-hidden="true"></span>{{ $L('Modern Cambodian Design Academy · Led by Lecturer Piseth Yoeurn', 'Modern Cambodian Design Academy · បង្រៀនដោយលោកគ្រូ ពិសិដ្ឋ') }}</p>
 
-        if ($cards->isEmpty()) {
-        $cards = collect([
-        ['mark' => 'Ps', 'title' => 'Photoshop', 'meta' => __('Photo editing & composites'), 'bg' => '#1E3A8A', 'fg' => '#EAF1FF'],
-        ['mark' => 'Ai', 'title' => 'Illustrator', 'meta' => __('Logos & branding'), 'bg' => '#FF8A00', 'fg' => '#1B0F00'],
-        ['mark' => 'Fg', 'title' => 'Figma', 'meta' => __('UI / UX design'), 'bg' => '#6B21A8', 'fg' => '#F5E9FF'],
-        ['mark' => 'Id', 'title' => 'InDesign', 'meta' => __('Editorial layout'), 'bg' => '#E8471E', 'fg' => '#FFF7EF'],
-        ['mark' => 'Mo', 'title' => 'Motion Graphics', 'meta' => __('Animation basics'), 'bg' => '#1F7A3E', 'fg' => '#EFFFF3'],
-        ['mark' => 'Aa', 'title' => 'Design Fundamentals', 'meta' => __('Type, colour, layout'), 'bg' => '#EDEDF1', 'fg' => '#0A0A0A'],
-        ])->map(function ($c) use ($adobeColors) {
-        $pick = $adobeColors[strtolower($c['mark'])] ?? $adobeColors['ps'];
-        $c['badge'] = '';
-        $c['bg'] = $pick[0];
-        $c['fg'] = $pick[1];
-        $c['url'] = route('courses');
-        return $c;
-        });
-        }
+                        <h1 id="hm-hero-title" class="hm-h1">
+                            {{ $L('Master Design Fundamentals.', 'រៀន Design ពីមូលដ្ឋានគ្រឹះ') }}<br>
+                            <span>{{ $L('Craft Valuable Creations.', 'ដល់ការបង្កើតស្នាដៃពិតៗ') }}</span>
+                        </h1>
 
-        // A short list is repeated so the fan looks full and can loop without a gap.
-        $realCount = $cards->count();
-        $deck = collect();
-        while ($deck->count() < 10) {
-            $deck=$deck->concat($cards);
-            }
-            @endphp
+                        <p class="hm-lead">{{ $L('Learn Graphic Design, UX/UI, Motion Graphics, and studio creative workflows through hands-on practice led by university lecturer Piseth Yoeurn.', 'រៀន Graphic Design, UX/UI, Motion Graphics និងជំនាញ Creative ដោយផ្តោតលើការអនុវត្តជាក់ស្តែង ជាមួយសាស្ត្រាចារ្យ យឿន ពិសិដ្ឋ។') }}</p>
 
-            @php
-            $adobe = ['PS', 'AI', 'ID', 'PR', 'AE', 'LR', 'XD', 'AU'];
-            @endphp
+                        <div class="hm-ctas">
+                            <a href="{{ $hmStartUrl }}" class="hm-btn hm-btn-primary">
+                                {{ $L('Start Learning', 'ចាប់ផ្ដើមរៀន') }}
+                                <svg class="hm-ico-sm hm-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+                            </a>
+                            <a href="#hm-courses" class="hm-btn hm-btn-ghost">{{ $L('Explore Courses', 'មើលវគ្គសិក្សា') }}</a>
+                        </div>
+                    </div>
 
-            <div class="intro" aria-hidden="true">
-                <div class="intro-words">
-                    @foreach (array_slice($adobe, 0, 5) as $k => $abbr)
-                    <span style="--k:{{ $k }}">{{ $abbr }}</span>
-                    @endforeach
-                    <span class="intro-final">PISETH<i></i></span>
-                </div>
-                <span class="intro-count"></span>
-            </div>
+                    {{-- macOS-style design window with the 3D studio scene --}}
+                    <div class="hm-art">
+                        <div class="hm-glow hm-glow-a" aria-hidden="true"></div>
+                        <div class="hm-glow hm-glow-b" aria-hidden="true"></div>
 
-            <section class="hero">
-                <div class="stage" id="stage">
-                    <div class="stage-inner">
-                        <div class="stage-left">
-                            <div class="stage-top">
-                                <div class="stage-eyebrow">
-                                    <span class="stage-script">{{ __('Founder & lead instructor') }}</span>
+                        <div class="hm-floats" aria-hidden="true">
+                            <div class="hm-float hm-float-progress">
+                                <div class="hm-fcard">
+                                    <span class="hm-ring">
+                                        <svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="18" fill="none" stroke-width="4" /><circle class="bar" cx="22" cy="22" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#4DA3FF" stroke-dasharray="113.1" stroke-dashoffset="24.9" /></svg>
+                                        <b class="hm-mono">78%</b>
+                                    </span>
+                                    <span><small>{{ $L('Overall Progress', 'វឌ្ឍនភាពសរុប') }}</small><strong>Design Course</strong></span>
                                 </div>
-                                <p class="stage-word" id="stage-word" aria-hidden="true">
-                                    <span class="w-line">@foreach (str_split('PISETH.') as $i => $ch)<span style="--i:{{ $i }}">{{ $ch }}</span>@endforeach</span>
-                                    <span class="w-line">@foreach (str_split('DESIGN') as $i => $ch)<span style="--i:{{ $i + 7 }}">{{ $ch }}</span>@endforeach</span>
-                                </p>
+                            </div>
+                            <div class="hm-float hm-float-cert">
+                                <div class="hm-fcard" style="gap:.5rem; padding:.5rem .75rem; border-radius:.75rem">
+                                    <svg class="hm-ico-sm" style="color:#4DA3FF" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6" /><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11" /></svg>
+                                    <strong>Design Course Certified</strong>
+                                    <svg class="hm-ico-sm" style="color:#10B981" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>
+                                </div>
+                            </div>
+                            <div class="hm-float hm-float-project">
+                                <div class="hm-fcard" style="padding:.625rem .75rem; border-radius:.75rem">
+                                    <span class="hm-mono" style="font-size:.875rem; font-weight:700; color:#FF9A00">#01</span>
+                                    <span><strong>{{ $L('Design Course Project', 'គម្រោង Design Course') }}</strong><small style="color:#E8890C">{{ $L('Teacher Feedback Received', 'បានទទួលមតិពីលោកគ្រូ') }}</small></span>
+                                </div>
+                            </div>
+                            <div class="hm-float hm-float-learning">
+                                <div class="hm-fcard" style="padding:.625rem 1rem .625rem .625rem; border-radius:.75rem">
+                                    <span class="hm-play"><svg class="hm-ico-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.6-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z" /></svg></span>
+                                    <span style="min-width:0">
+                                        <span class="hm-live">{{ $L('Currently Learning', 'កំពុងរៀន') }}</span>
+                                        <strong style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Design Course: Visual Hierarchy</strong>
+                                        <small>{{ $L('38 mins remaining', 'នៅសល់ 38 នាទី') }}</small>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hm-window">
+                            <div class="hm-titlebar">
+                                <span class="hm-lights" aria-hidden="true"><i style="background:#FF5F56"></i><i style="background:#FFBD2E"></i><i style="background:#27C93F"></i></span>
+                                <span class="hm-file hm-mono">design_course_curriculum.fig</span>
+                                <span class="hm-badge">
+                                    <svg class="hm-ico-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3l1.9 5.6 5.6 1.9-5.6 1.9L11 18l-1.9-5.6-5.6-1.9 5.6-1.9z" /><path d="M19 3v4M17 5h4" /></svg>
+                                    Design Course
+                                </span>
                             </div>
 
-                            <div class="stage-bottom">
-                                <h1 class="hero-title">
-                                    <span class="hero-line rise" style="--d:.7s">{{ __('We can teach you the software in a fortnight.') }}</span>
-                                    <em class="hero-line rise" style="--d:.82s">{{ __('The eye takes a little longer.') }}</em>
-                                </h1>
+                            <div class="hm-canvas-pad">
+                                <div class="hm-canvas">
+                                    <div class="hm-grid-lines" aria-hidden="true"></div>
+                                    <div class="hm-canvas-grid">
+                                        <div class="hm-canvas-copy">
+                                            <p class="hm-canvas-title">Design Course</p>
+                                            <p class="hm-canvas-sub">Graphic Design · UX/UI · Motion Graphics</p>
+                                            <div class="hm-tags">
+                                                <span class="hm-tag hm-mono" style="background:#001E36; color:#31A8FF; border:1px solid rgba(49,168,255,.3)">Adobe Photoshop</span>
+                                                <span class="hm-tag hm-mono" style="background:#332200; color:#FFB547; border:1px solid rgba(255,181,71,.3)">Adobe Illustrator</span>
+                                                <span class="hm-tag hm-mono" style="background:#1F1335; color:#C79BFF; border:1px solid rgba(199,155,255,.3)">UX/UI Design · Figma</span>
+                                            </div>
+                                        </div>
 
-                                <div class="stage-row">
-                                    <p class="hero-sub rise" style="--d:.95s">{{ __('Free to start. Lessons run in English and Khmer.') }}</p>
-                                    <div class="hero-ctas rise" style="--d:1.05s">
-                                        @auth
-                                        <a href="{{ route('learning.index') }}" class="inline-flex items-center px-6 py-3 font-medium rounded-sm hero-cta is-primary">
-                                            {{ __('Continue learning') }}
-                                        </a>
-                                        @else
-                                        <a href="{{ route('register') }}" class="inline-flex items-center px-6 py-3 font-medium rounded-sm hero-cta is-primary">
-                                            {{ __('Start learning free') }}
-                                        </a>
-                                        @endauth
-                                        <a href="{{ route('courses') }}" class="inline-flex items-center px-6 py-3 font-medium rounded-sm hero-cta is-secondary">
-                                            {{ __('See the courses') }}
+                                        <div class="hm-stage" aria-hidden="true">
+                                            <div class="hm-stage-glow"></div>
+                                            <span class="hm-star" style="top:12%; left:18%"></span>
+                                            <span class="hm-star" style="top:22%; right:14%; animation-delay:.9s"></span>
+                                            <span class="hm-star" style="bottom:18%; left:10%; animation-delay:1.6s"></span>
+                                            <span class="hm-star" style="bottom:10%; right:24%; animation-delay:.4s"></span>
+                                            <span class="hm-star" style="top:48%; right:6%; animation-delay:2.2s"></span>
+                                            <div class="hm-ring-tilt"><i></i></div>
+                                            <div class="hm-orbit"><i></i></div>
+
+                                            <div class="hm-scene">
+                                                <div class="hm-cube-shadow"></div>
+                                                <div class="hm-cube">
+                                                    <div class="hm-cube-grid"></div>
+                                                    <div class="hm-cube-cool"></div>
+                                                    <div class="hm-cube-warm"></div>
+                                                    <div class="hm-cube-rim"></div>
+                                                    <div class="hm-cube-sheen"></div>
+                                                    <div class="hm-cube-face">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19 7-7 3 3-7 7-3-3z" /><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="m2 2 7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
+                                                        <span class="hm-mono">3D STUDIO</span>
+                                                    </div>
+                                                </div>
+
+                                                {{-- the yellow tile is a small sun lighting the cube --}}
+                                                <div class="hm-sat hm-sat-sun">
+                                                    <span class="hm-sun-beam"></span>
+                                                    <span class="hm-sun-motes"><i style="top:-12px"></i><i style="top:-3px; animation-delay:.9s"></i><i style="top:6px; animation-delay:1.8s"></i></span>
+                                                    <span class="hm-sun-rays"></span>
+                                                    <span class="hm-sun-halo"></span>
+                                                    <div class="hm-tile hm-tile-sun"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="#3B2A00" d="M12 2l2.1 6.4L20.5 10.5l-6.4 2.1L12 19l-2.1-6.4L3.5 10.5l6.4-2.1z" /></svg></div>
+                                                </div>
+                                                <div class="hm-sat hm-sat-figma">
+                                                    <div class="hm-tile hm-tile-figma">
+                                                        <svg viewBox="0 0 38 57" width="18" height="26"><path fill="#1ABCFE" d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z" /><path fill="#0ACF83" d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z" /><path fill="#FF7262" d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z" /><path fill="#F24E1E" d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z" /><path fill="#A259FF" d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z" /></svg>
+                                                    </div>
+                                                </div>
+                                                <div class="hm-sat hm-sat-ps"><div class="hm-tile hm-tile-ps">Ps</div></div>
+                                                <div class="hm-sat hm-sat-ai"><div class="hm-tile hm-tile-ai">Ai</div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="hm-canvas-foot">
+                                        <a href="{{ route('courses') }}" class="hm-link">
+                                            {{ $L('Open Design Course', 'បើក Design Course') }}
+                                            <svg class="hm-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
                                         </a>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="stage-right">
-                            <figure class="stage-card" style="margin:0">
-                                <img src="{{ asset('images/piseth-cutout.png') }}" width="777" height="1184"
-                                    alt="{{ __('Piseth, founder of Piseth.Design Classroom') }}" decoding="async" fetchpriority="high" draggable="false">
-                            </figure>
+                            <div class="hm-window-foot">
+                                <div class="hm-person">
+                                    <span class="hm-py hm-mono">PY</span>
+                                    <p>{{ $L('Instructor:', 'គ្រូបង្រៀន:') }} <b>{{ $hmTeacher }}</b></p>
+                                </div>
+                                <a href="{{ route('courses') }}" class="hm-link" style="flex-shrink:0">
+                                    {{ $L('Design Course Curriculum', 'កម្មវិធីសិក្សា') }}
+                                    <svg class="hm-ico-sm hm-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+                                </a>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div id="fan" class="fan hero-in-up" role="region" aria-roledescription="carousel" aria-label="{{ __('Courses') }}">
-                    @foreach ($deck as $i => $card)
-                    <a href="{{ $card['url'] }}"
-                        class="fan-card"
-                        draggable="false"
-                        data-title="{{ $card['title'] }}"
-                        @if ($i>= $realCount) aria-hidden="true" tabindex="-1" @endif>
-                        <span class="fan-face" style="--bg:{{ $card['bg'] }}; --fg:{{ $card['fg'] }}">
-                            <span class="fan-head">
-                                <span class="fan-mark">{{ $card['mark'] }}</span>
-                                @if (!empty($card['sale']))
-                                <span class="fan-badge is-sale"><span class="sr-only">{{ __('Regular price') }}</span><s>{{ $card['badge'] }}</s> <span class="sr-only">{{ __('Sale price') }}</span>{{ $card['sale'] }}</span>
-                                @elseif (!empty($card['badge']))
-                                <span class="fan-badge">{{ $card['badge'] }}</span>
-                                @endif
-                            </span>
-                            <span class="fan-title">{{ $card['title'] }}</span>
-                            <span class="fan-meta">{{ $card['meta'] }}</span>
-                            <span class="fan-device {{ $i % 2 === 0 ? 'is-phone' : 'is-tab' }}" aria-hidden="true">
-                                <span class="dv-screen"><i></i><i></i><i></i><b></b></span>
-                            </span>
-                        </span>
-                    </a>
-                    @endforeach
-
-                    <div class="fan-ui">
-                        <button type="button" id="fan-prev" class="fan-btn" aria-label="{{ __('Previous course') }}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M15 5l-7 7 7 7" />
-                            </svg>
-                        </button>
-                        <span id="fan-caption" class="fan-caption"></span>
-                        <button type="button" id="fan-next" class="fan-btn" aria-label="{{ __('Next course') }}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
                     </div>
                 </div>
             </section>
 
-            <!-- Features -->
-            <div id="features" class="max-w-6xl px-6 mx-auto pb-28 scroll-mt-20">
-                <h2 class="mb-10 text-2xl font-bold font-display" data-reveal>{{ __('What you actually get') }}</h2>
-                <div class="grid gap-10 sm:grid-cols-3 sm:gap-8">
-                    <div class="pt-6" style="border-top:1px solid var(--mist); --i:1" data-reveal>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-4" style="box-sizing:content-box; color:var(--action); background:var(--action-soft); padding:10px; border-radius:12px">
-                            <path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 014 18.5v-13z" />
-                            <path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 001.5-1.5v-13z" />
-                        </svg>
-                        <h3 class="font-semibold mb-1.5">{{ __('Structured courses') }}</h3>
-                        <p class="text-sm" style="color:var(--graphite)">{{ __('Step-by-step lessons that build real skills, not just theory.') }}</p>
-                    </div>
-                    <div class="pt-6" style="border-top:1px solid var(--mist); --i:2" data-reveal>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-4" style="box-sizing:content-box; color:var(--action); background:var(--action-soft); padding:10px; border-radius:12px">
-                            <path d="M4 5h16v11H9l-4 4V5z" stroke-linejoin="round" />
-                            <path d="M8 9h8M8 12.5h5" />
-                        </svg>
-                        <h3 class="font-semibold mb-1.5">{{ __('Real feedback') }}</h3>
-                        <p class="text-sm" style="color:var(--graphite)">{{ __('Get reviewed work and guidance, not just pre-recorded videos.') }}</p>
-                    </div>
-                    <div class="pt-6" style="border-top:1px solid var(--mist); --i:3" data-reveal>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-4" style="box-sizing:content-box; color:var(--action); background:var(--action-soft); padding:10px; border-radius:12px">
-                            <circle cx="12" cy="9" r="5" />
-                            <path d="M9 13.5L7 21l5-2.5L17 21l-2-7.5" stroke-linejoin="round" />
-                        </svg>
-                        <h3 class="font-semibold mb-1.5">{{ __('Certificates') }}</h3>
-                        <p class="text-sm" style="color:var(--graphite)">{{ __('Finish a course and get a shareable certificate for your portfolio.') }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Courses -->
-            <div id="courses" class="scroll-mt-20" style="background:var(--surface); border-top:1px solid var(--mist); border-bottom:1px solid var(--mist)">
-                <div class="max-w-6xl px-6 py-20 mx-auto">
-                    <div class="flex items-end justify-between mb-10" data-reveal>
+            {{-- ============================== COURSES (real courses from the database) ============================== --}}
+            <section id="hm-courses" class="hm-section" aria-labelledby="hm-courses-title">
+                <div class="hm-wrap">
+                    <div class="hm-head">
                         <div>
-                            <h2 class="mb-2 text-2xl font-bold font-display">{{ __('Courses') }}</h2>
-                            <p class="text-sm" style="color:var(--graphite)">{{ __('Start free, or go pro with a full course.') }}</p>
+                            <p class="hm-label hm-mono">Featured Curriculums</p>
+                            <h2 id="hm-courses-title" class="hm-h2">{{ $L('Featured Design Curriculums', 'វគ្គសិក្សាជំនាញរចនាជ្រើសរើសពិសេស') }}</h2>
+                            <p class="hm-desc">{{ $L('Industry-aligned programs in Graphic Design, UI/UX and Motion Graphics, built around what the job market needs.', 'កម្មវិធីសិក្សាផ្តោតលើជំនាញ Graphic Design, UI/UX, និង Motion Graphics ស្របតាមតម្រូវការទីផ្សារការងារ។') }}</p>
                         </div>
-                        <a href="{{ url('/courses') }}" class="items-center hidden gap-1 text-sm font-medium transition-all sm:inline-flex hover:gap-2">
-                            {{ __('View all') }}
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                            </svg>
-                        </a>
-                    </div>
-
-
-                    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        @foreach ($courses as $course)
-                        <a href="{{ route('courses.show', $course) }}" class="relative block p-6 rounded-sm course-tile" style="background:var(--paper); border:1px solid var(--mist); color:var(--ink); --i:{{ $loop->index % 3 }}" data-reveal>
-                            @if ($loop->iteration === 1 || $loop->iteration === 4)
-                            <span class="pin" aria-hidden="true"></span>
-                            @endif
-
-                            <div class="mb-5 text-3xl font-bold font-display">{{ $course->mark }}</div>
-
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="text-xs font-medium tracking-wide uppercase opacity-60">{{ __($course->level) }}</span>
-                                @if ($course->isFree())
-                                <span class="text-xs font-semibold px-2 py-0.5 rounded-sm" style="color:var(--action-ink); background:var(--action-soft); border:1px solid var(--action)">{{ __('Free') }}</span>
-                                @else
-                                <x-sale-price :course="$course" class="text-xs font-semibold px-2 py-0.5 rounded-sm border border-current opacity-80" />
-                                @endif
+                        @if ($hmCategories->count() > 1)
+                            <div class="hm-tabs" data-jelly-tabs data-target="#hm-course-grid [data-category]">
+                                <div class="hm-tabs-track" role="tablist" aria-label="{{ $L('Filter courses by category', 'ជ្រើសរើសប្រភេទវគ្គសិក្សា') }}">
+                                    <span class="hm-jelly-trail" aria-hidden="true"></span>
+                                    <span class="hm-jelly" aria-hidden="true"><span class="hm-jelly-blob"></span><span class="hm-sparks"></span></span>
+                                    <button type="button" role="tab" class="hm-tab" aria-selected="true" data-value="__all"><span>{{ $L('All', 'ទាំងអស់') }}</span></button>
+                                    @foreach ($hmCategories as $cat)
+                                        <button type="button" role="tab" class="hm-tab" aria-selected="false" tabindex="-1" data-value="{{ $cat }}"><span>{{ __($cat) }}</span></button>
+                                    @endforeach
+                                </div>
                             </div>
-                            <h3 class="mb-3 font-medium">{{ $course->localized('title') }}</h3>
-                            <span class="text-xs opacity-60">{{ __(':count lessons', ['count' => $course->lessons_count]) }}</span>
-                        </a>
-                        @endforeach
+                        @endif
                     </div>
-                </div>
-            </div>
 
-            <!-- How it works -->
-            <div class="max-w-6xl px-6 py-24 mx-auto">
-                <div data-reveal>
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] mb-3" style="color:var(--action-ink)">{{ __('Step-by-step') }}</p>
-                    <h2 class="mb-10 text-2xl font-bold font-display">{{ __('How it works') }}</h2>
-                </div>
-                <ol class="grid gap-6 sm:grid-cols-4">
-                    @foreach ([
-                    [__('Create an account'), __('Sign up in seconds and open the free starter lessons.')],
-                    [__('Select your tool'), __('Photoshop, Illustrator, Figma, InDesign, or Motion Graphics.')],
-                    [__('Learn & practise'), __('Watch the sheet, mark complete, keep the notes.')],
-                    [__('Get certified'), __('Finish every lesson and stamp a certificate on your profile.')],
-                    ] as $i => $step)
-                    <li class="pt-6" style="border-top:1px solid var(--mist); --i:{{ $i + 1 }}" data-reveal>
-                        <span class="text-xs font-semibold" style="color:var(--action-ink)">{{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}</span>
-                        <h3 class="font-semibold mt-2 mb-1.5">{{ $step[0] }}</h3>
-                        <p class="text-sm" style="color:var(--graphite)">{{ $step[1] }}</p>
-                    </li>
-                    @endforeach
-                </ol>
-            </div>
+                    @if ($hmCourses->isEmpty())
+                        <p class="hm-empty">{{ $L('New courses are on the way. Check back soon.', 'វគ្គសិក្សាថ្មីនឹងមកដល់ឆាប់ៗនេះ។') }}</p>
+                    @else
+                        <div id="hm-course-grid" class="hm-course-grid">
+                            @foreach ($hmCourses as $course)
+                                @php
+                                    $mark = trim((string) $course->mark);
+                                    $pick = $hmMarks[strtolower($mark)] ?? $hmMarks[$hmCycle[$loop->index % count($hmCycle)]];
+                                    $thumb = $course->thumbnailSrc();
+                                    $title = $course->localized('title');
+                                    $subtitle = $course->localized('subtitle');
+                                    $onSale = ! $course->isFree() && $course->isOnSale();
+                                    $off = ($onSale && (float) $course->price > 0) ? (int) round((1 - $course->salePrice() / (float) $course->price) * 100) : 0;
+                                @endphp
+                                <article class="hm-card" data-category="{{ $course->category }}">
+                                    <div class="hm-cover" style="--mark-bg: {{ $pick[0] }}; --mark-fg: {{ $pick[1] }}">
+                                        @if ($thumb)
+                                            <img src="{{ $thumb }}" alt="{{ $title }}" loading="lazy" decoding="async">
+                                        @else
+                                            <div class="hm-cover-fallback" aria-hidden="true"><span>{{ $mark ?: 'PD' }}</span></div>
+                                        @endif
+                                        <div class="hm-scrim"></div>
 
-            <!-- Student work -->
-            <div class="scroll-mt-20" style="background:var(--surface); border-top:1px solid var(--mist); border-bottom:1px solid var(--mist)">
-                <div class="max-w-6xl px-6 py-20 mx-auto">
-                    <div data-reveal>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] mb-3" style="color:var(--action-ink)">{{ __('Real student outcomes') }}</p>
-                        <h2 class="mb-10 text-2xl font-bold font-display">{{ __('Student work & projects') }}</h2>
-                    </div>
-                    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                        @foreach ([
-                        ['mark' => 'Ai', 'tag' => __('Illustrator & Branding'), 'title' => __('Phnom Penh Specialty Coffee Branding'), 'name' => 'Vicheka Seng'],
-                        ['mark' => 'Ps', 'tag' => __('Photoshop Composite'), 'title' => __('Cambodian Water Festival Social Poster'), 'name' => 'Sokha Chan'],
-                        ['mark' => 'Fg', 'tag' => __('Figma UI/UX'), 'title' => __('Fintech Mobile Banking App UI'), 'name' => 'Dara Meas'],
-                        ['mark' => 'Id', 'tag' => __('Editorial Print'), 'title' => __('Heritage Khmer Architecture Book Layout'), 'name' => 'Bopha Lim'],
-                        ] as $w => $work)
-                        <div class="p-5 rounded-sm" style="background:var(--paper); border:1px solid var(--mist); --i:{{ $w + 1 }}" data-reveal>
-                            <div class="mb-8 text-3xl font-bold font-display">{{ $work['mark'] }}</div>
-                            <p class="mb-1 text-xs tracking-wide uppercase opacity-60">{{ $work['tag'] }}</p>
-                            <h3 class="mb-3 text-sm font-medium leading-snug">{{ $work['title'] }}</h3>
-                            <p class="text-xs opacity-60">{{ $work['name'] }}</p>
+                                        <div class="hm-cover-top">
+                                            @if ($mark !== '')
+                                                <span class="hm-sw hm-mono" style="background: {{ $pick[0] }}; color: {{ $pick[1] }}; border: 1px solid {{ $pick[1] }}4D">{{ $mark }}</span>
+                                            @else
+                                                <span></span>
+                                            @endif
+                                            <div class="hm-cover-tools">
+                                                @if ($course->category)
+                                                    <span class="hm-cat">{{ __($course->category) }}</span>
+                                                @endif
+                                                <button type="button" class="hm-heart" data-wish="{{ $course->slug }}" aria-pressed="false"
+                                                    aria-label="{{ $L('Add to wishlist', 'រក្សាទុកក្នុងបញ្ជីចូលចិត្ត') }}"
+                                                    data-label-on="{{ $L('Remove from wishlist', 'ដកចេញពីបញ្ជីចូលចិត្ត') }}"
+                                                    data-label-off="{{ $L('Add to wishlist', 'រក្សាទុកក្នុងបញ្ជីចូលចិត្ត') }}">
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="hm-cover-bottom">
+                                            <h3>{{ $title }}</h3>
+                                            @if ($subtitle !== '')
+                                                <p class="hm-mono">{{ $subtitle }}</p>
+                                            @endif
+                                            <div class="hm-meta">
+                                                @if ($course->level)
+                                                    <span>
+                                                        <svg class="hm-ico-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M6 20V10M12 20V4M18 20v-7" /></svg>
+                                                        {{ __($course->level) }}
+                                                    </span>
+                                                @endif
+                                                <span>
+                                                    <svg class="hm-ico-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7z" /><path d="m2 17 10 5 10-5" /><path d="m2 12 10 5 10-5" /></svg>
+                                                    <span class="hm-mono">{{ __(':count lessons', ['count' => $course->lessons_count]) }}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="hm-card-body">
+                                        <div class="hm-person">
+                                            <span class="hm-avatar" style="width:2.5rem; height:2.5rem" role="img" aria-label="{{ $course->instructor_name ?: $hmTeacher }}">
+                                                <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><circle cx="32" cy="23" r="12.5" /><path d="M7 64c0-14.5 11.2-25 25-25s25 10.5 25 25z" /></svg>
+                                            </span>
+                                            <div style="min-width:0">
+                                                <p class="name">{{ $hmKm ? $hmTeacherKh : ($course->instructor_name ?: $hmTeacher) }}</p>
+                                                <p class="role">{{ $course->instructor_title ?: $L('Senior Visual & Motion Designer', 'Senior Visual & Motion Designer') }}</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="hm-buy">
+                                            <div>
+                                                <small>{{ $L('Tuition', 'តម្លៃសិក្សា') }}</small>
+                                                <p class="hm-price">
+                                                    @if ($course->isFree())
+                                                        <b>{{ __('Free') }}</b>
+                                                    @elseif ($onSale)
+                                                        <b>{{ $course->salePriceLabel() }}</b>
+                                                        <s>{{ $course->priceLabel() }}</s>
+                                                        @if ($off > 0)
+                                                            <span class="hm-off hm-mono">-{{ $off }}%</span>
+                                                        @endif
+                                                    @else
+                                                        <b>{{ $course->priceLabel() }}</b>
+                                                    @endif
+                                                </p>
+                                            </div>
+                                            <a href="{{ route('courses.show', $course) }}" class="hm-enroll">
+                                                {{ $L('Enroll Now', 'ចុះឈ្មោះរៀន') }}
+                                                <svg class="hm-ico-sm hm-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </article>
+                            @endforeach
                         </div>
+                    @endif
+                </div>
+            </section>
+
+            {{-- ============================== INSTRUCTOR ============================== --}}
+            <section id="hm-instructor" class="hm-section" aria-labelledby="hm-instructor-title">
+                <div class="hm-wrap">
+                    <div class="hm-teacher">
+                        <div class="hm-teacher-grid">
+                            <div class="hm-teacher-left">
+                                <div class="hm-portrait">
+                                    <span class="hm-avatar hm-avatar--square" role="img" aria-label="{{ $hmTeacher }}">
+                                        <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><circle cx="32" cy="23" r="12.5" /><path d="M7 64c0-14.5 11.2-25 25-25s25 10.5 25 25z" /></svg>
+                                    </span>
+                                    <div class="hm-lecturer">
+                                        <span class="ic"><svg class="hm-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></svg></span>
+                                        <span><b>{{ $L('University Lecturer', 'សាស្ត្រាចារ្យសាកលវិទ្យាល័យ') }}</b><span>Build Bright University, Siem Reap</span></span>
+                                    </div>
+                                </div>
+                                <div class="hm-stats">
+                                    <div class="hm-stat"><b class="hm-mono">10+ Years</b><span>{{ $L('Design Experience', 'បទពិសោធន៍ Design') }}</span></div>
+                                    <div class="hm-stat"><b class="hm-mono">1,400+</b><span>{{ $L('Graduated Students', 'និស្សិតបានសិក្សា') }}</span></div>
+                                </div>
+                            </div>
+
+                            <div class="hm-teacher-right">
+                                <div>
+                                    <p class="hm-label hm-mono">Meet Your Instructor <span style="color:var(--h-muted); text-transform:none; letter-spacing:0">· {{ $L('10+ years of experience', 'បទពិសោធន៍ជាង ១០ ឆ្នាំ') }}</span></p>
+                                    <h2 id="hm-instructor-title" class="hm-teacher-name"><span class="hm-km" style="color:inherit">គ្រូបង្រៀន {{ $hmTeacherKh }}</span> <span>({{ $hmTeacher }})</span></h2>
+                                    <p class="hm-role">{{ $L('Senior Visual & Motion Designer · Lecturer at Build Bright University', 'Senior Visual & Motion Designer · សាស្ត្រាចារ្យនៅសាកលវិទ្យាល័យ Build Bright') }}</p>
+                                </div>
+
+                                <blockquote class="hm-quote">“{{ $L('Design is not merely mastering software. It is layout balance, typography, emotion and discipline, used to solve real problems. I created piseth.design to share real studio experience with young Cambodian creatives.', 'ការរចនាមិនមែនត្រឹមតែការប្រើ Tool នោះទេ ប៉ុន្តែជាការគិតស៊ីជម្រៅពី Layout, Grid, Typography និង Emotion ដើម្បីដោះស្រាយបញ្ហាពិតប្រាកដ។ ខ្ញុំបង្កើត piseth.design ដើម្បីចែករំលែកបទពិសោធន៍ជាក់ស្តែងដល់ប្អូនៗនិស្សិតខ្មែរ។') }}”</blockquote>
+
+                                <div>
+                                    <div class="hm-skills-head">
+                                        <h3>
+                                            <svg class="hm-ico-sm" style="color:var(--h-sky)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3l1.9 5.6 5.6 1.9-5.6 1.9L11 18l-1.9-5.6-5.6-1.9 5.6-1.9z" /><path d="M19 3v4M17 5h4" /></svg>
+                                            {{ $L('10 Core Specializations', 'ជំនាញឯកទេស (My Professional Skills)') }}
+                                        </h3>
+                                        <span class="hm-pill-count hm-mono">10 Specializations</span>
+                                    </div>
+                                    <ul class="hm-skills">
+                                        @foreach ($hmSkills as [$emoji, $skill, $tag])
+                                            <li class="hm-skill">
+                                                <span class="t"><span class="e" aria-hidden="true">{{ $emoji }}</span><span>{{ $skill }}</span></span>
+                                                <span class="g hm-mono">{{ $tag }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+
+                                <div class="hm-trust-row">
+                                    <ul class="hm-trust">
+                                        @foreach (['Direct 1-on-1 Feedback', 'Agency Client Briefs', 'Khmer Typography Expertise'] as $item)
+                                            <li><svg class="hm-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
+                                    <a href="{{ route('about') }}" class="hm-link" style="white-space:nowrap">
+                                        {{ $L('Full Teaching Philosophy & Story', 'ស្វែងយល់បន្ថែមពីទស្សនវិជ្ជាបង្រៀន') }}
+                                        <svg class="hm-ico-sm hm-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {{-- ============================== STUDENT SHOWCASE ============================== --}}
+            <section id="hm-showcase" class="hm-section" aria-labelledby="hm-showcase-title">
+                <div class="hm-wrap">
+                    <div class="hm-head">
+                        <div>
+                            <p class="hm-label hm-mono">Student Work</p>
+                            <h2 id="hm-showcase-title" class="hm-h2">{{ $L('Student Creative Showcase', 'ស្នាដៃសិស្សឆ្នើម (Student Creative Showcase)') }}</h2>
+                            <p class="hm-desc">{{ $L("Real design projects by Cambodian students, held to Piseth Yoeurn's teaching standards. Tap a project to inspect it.", 'គម្រោងរចនាជាក់ស្តែងអនុវត្តដោយនិស្សិតកម្ពុជា តាមស្តង់ដារបង្រៀនរបស់លោកគ្រូ យឿន ពិសិដ្ឋ។ ចុចលើរូបដើម្បីពិនិត្យលម្អិត។') }}</p>
+                        </div>
+                        <div class="hm-tabs" data-jelly-tabs data-target="#hm-show-grid [data-category]">
+                            <div class="hm-tabs-track" role="tablist" aria-label="{{ $L('Filter projects by course', 'ជ្រើសរើសប្រភេទស្នាដៃ') }}">
+                                <span class="hm-jelly-trail" aria-hidden="true"></span>
+                                <span class="hm-jelly" aria-hidden="true"><span class="hm-jelly-blob"></span><span class="hm-sparks"></span></span>
+                                <button type="button" role="tab" class="hm-tab" aria-selected="true" data-value="__all"><span>{{ $L('All', 'ទាំងអស់') }}</span></button>
+                                @foreach (['Graphic Design', 'UX/UI Design', 'Motion Graphics'] as $cat)
+                                    <button type="button" role="tab" class="hm-tab" aria-selected="false" tabindex="-1" data-value="{{ $cat }}"><span>{{ $cat }}</span></button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="hm-show-grid" class="hm-show-grid">
+                        @foreach ($hmProjects as $p)
+                            <article class="hm-card hm-show" data-category="{{ $p['course'] }}" data-project="{{ $p['id'] }}" role="button" tabindex="0"
+                                aria-label="{{ $L('Inspect Details', 'ពិនិត្យស្នាដៃលម្អិត') }}: {{ $p['title'] }}">
+                                <div class="hm-cover">
+                                    <img src="{{ $p['image'] }}" alt="{{ $p['title'] }}" loading="lazy" decoding="async">
+                                    <div class="hm-show-shade"></div>
+                                    <div class="hm-show-top">
+                                        <span class="hm-award hm-mono">
+                                            <svg class="hm-ico-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6" /><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11" /></svg>
+                                            {{ $p['badge'] }}
+                                        </span>
+                                        <button type="button" class="hm-like" data-like="{{ $p['id'] }}" data-base="{{ $p['likes'] }}" aria-pressed="false"
+                                            aria-label="{{ $L('Like this project', 'ចូលចិត្តគម្រោងនេះ') }}">
+                                            <svg class="hm-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /></svg>
+                                            <span class="hm-mono" data-count>{{ $p['likes'] }}</span>
+                                        </button>
+                                    </div>
+                                    <div class="hm-show-hover">
+                                        <span class="hm-inspect">
+                                            <svg class="hm-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+                                            {{ $L('Inspect Details', 'ពិនិត្យស្នាដៃលម្អិត') }}
+                                        </span>
+                                        <span class="hm-grade hm-mono">{{ $L('Grade', 'ពិន្ទុ') }} {{ $p['grade'] }}</span>
+                                    </div>
+                                </div>
+                                <div class="hm-show-body">
+                                    <p class="hm-course-tag hm-mono">{{ $p['course'] }}</p>
+                                    <div>
+                                        <h3>{{ $p['title'] }}</h3>
+                                        <p class="kh hm-km">{{ $p['titleKh'] }}</p>
+                                    </div>
+                                    <p class="hm-clamp">{{ $p['description'] }}</p>
+                                    <div class="hm-show-foot">
+                                        <div class="hm-person">
+                                            <img class="hm-student-img" src="{{ $p['studentAvatar'] }}" alt="{{ $p['studentName'] }}" loading="lazy" decoding="async">
+                                            <div style="min-width:0">
+                                                <p class="name">{{ $p['studentName'] }}</p>
+                                                <p class="role hm-km" style="font-size:11px">{{ $p['studentNameKh'] }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="hm-tools">
+                                            @foreach (array_slice($p['tools'], 0, 2) as $tool)
+                                                <span class="hm-tool hm-mono">{{ $tool }}</span>
+                                            @endforeach
+                                            @if (count($p['tools']) > 2)
+                                                <span class="hm-mono" style="font-size:10px; color:var(--h-muted)">+{{ count($p['tools']) - 2 }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
                         @endforeach
                     </div>
                 </div>
+            </section>
+        </main>
+
+        {{-- ============================== FOOTER ============================== --}}
+        <footer class="hm-footer">
+            <div class="hm-wrap hm-footer-grid">
+                <div>
+                    <p class="hm-wordmark">piseth<span>.design</span></p>
+                    <p>{{ $L('Modern creative design academy founded by university lecturer Piseth Yoeurn. Educating Cambodian creators to craft international-standard design.', 'Modern creative design academy founded by university lecturer Piseth Yoeurn. Educating Cambodian creators to craft international-standard design.') }}</p>
+                    <p class="motto hm-km">រៀន Design ឲ្យច្បាស់ បង្កើតស្នាដៃឲ្យមានតម្លៃ។</p>
+                </div>
+
+                <div>
+                    <p class="hm-fhead">{{ $L('Courses', 'Courses · វគ្គសិក្សា') }}</p>
+                    <ul class="hm-flinks">
+                        @foreach ($hmCourses->take(4) as $course)
+                            <li><a href="{{ route('courses.show', $course) }}">{{ $course->localized('title') }}</a></li>
+                        @endforeach
+                        <li><a href="{{ route('courses', ['free' => 1]) }}">{{ __('Free Courses') }}</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <p class="hm-fhead">{{ $L('Student Platform', 'Student Platform') }}</p>
+                    <ul class="hm-flinks">
+                        <li><a href="{{ route('learning.index') }}">{{ __('My Learning') }}</a></li>
+                        <li><a href="{{ route('learning.index') }}">{{ __('Certificates') }}</a></li>
+                        <li><a href="{{ route('learning.profile') }}">{{ __('Profile') }}</a></li>
+                        <li><a href="{{ route('about') }}">{{ __('About') }}</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <p class="hm-fhead">{{ $L('Teacher & Community', 'Teacher & Community') }}</p>
+                    <p>{{ $L('Lecturer at Build Bright University, Siem Reap. Curriculum built on real agency and client work.', 'សាស្ត្រាចារ្យនៅ Build Bright University, Siem Reap។ កម្មវិធីសិក្សាផ្អែកលើការងារជាក់ស្តែងជាមួយអតិថិជន។') }}</p>
+                    <ul class="hm-flinks">
+                        <li>
+                            <button type="button"
+                                aria-haspopup="dialog"
+                                aria-label="{{ __('Telegram (show QR code)') }}"
+                                x-data
+                                x-on:click="$dispatch('open-telegram-qr')"
+                                class="pd-qr-trigger">Telegram</button>
+                            @include('partials._telegram-qr-dialog')
+                        </li>
+                        <li><a href="{{ config('social.facebook') }}" target="_blank" rel="noopener noreferrer" aria-label="{{ __('Facebook (opens in a new tab)') }}">Facebook</a></li>
+                        <li><a href="{{ config('social.instagram') }}" target="_blank" rel="noopener noreferrer" aria-label="{{ __('Instagram (opens in a new tab)') }}">Instagram</a></li>
+                    </ul>
+                </div>
             </div>
 
-            <!-- FAQ -->
-            <div class="max-w-3xl px-6 py-24 mx-auto" x-data="{ open: 0 }">
-                <div data-reveal>
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] mb-3 text-center" style="color:var(--action-ink)">{{ __('Answers & guidance') }}</p>
-                    <h2 class="mb-10 text-2xl font-bold text-center font-display">{{ __('Frequently asked questions') }}</h2>
+            <div class="hm-wrap">
+                <div class="hm-footer-bar">
+                    <p>&copy; {{ date('Y') }} piseth.design. All rights reserved.</p>
+                    <p>{{ __('Made in Siem Reap, Cambodia') }}</p>
                 </div>
-                @php
-                $faqs = [
-                [
-                'en' => 'Do I need prior graphic design skills to join?',
-                'km' => 'តើខ្ញុំត្រូវមានជំនាញ Graphic Design រួចហើយទេ?',
-                'a_en' => 'Not at all. Beginner courses (Photoshop Beginner and Graphic Design Fundamentals) start from workspace setup, basic tools, and practical exercises.',
-                'a_km' => 'មិនចាំបាច់ទេ។ វគ្គសម្រាប់អ្នកចាប់ផ្តើមចាប់ពីការរៀបចំ workspace រហូតដល់លំហាត់ជាក់ស្តែង។',
-                ],
-                [
-                'en' => 'Can I watch the videos at my own pace?',
-                'km' => 'តើខ្ញុំអាចមើលវីដេអូតាមល្បឿនខ្លួនឯងបានទេ?',
-                'a_en' => 'Yes. Every lesson stays on your desk. Mark complete when you are ready; progress is saved to your account.',
-                'a_km' => 'បាន។ មេរៀននៅលើតុរបស់អ្នក។ គូសថាបានបញ្ចប់ពេលអ្នករួចរាល់។',
-                ],
-                [
-                'en' => 'How do video lessons work with YouTube and Google Drive?',
-                'km' => 'តើមេរៀន YouTube និង Google Drive ដំណើរការយ៉ាងដូចម្តេច?',
-                'a_en' => 'Instructors paste a YouTube or Drive URL. Students watch the embed in the lesson player — no extra accounts required for playback.',
-                'a_km' => 'គ្រូដាក់តំណ YouTube ឬ Drive។ សិស្សមើលក្នុងទំព័រមេរៀនដោយមិនចាំបាច់គណនីផ្សេង។',
-                ],
-                [
-                'en' => 'Will I receive a verified certificate upon completion?',
-                'km' => 'តើខ្ញុំនឹងទទួលបានវិញ្ញាបនបត្រទេ?',
-                'a_en' => 'Yes. Complete every lesson in a course and a certificate with a unique code is issued on My Learning.',
-                'a_km' => 'បាទ/ចាស។ បញ្ចប់គ្រប់មេរៀនក្នុងវគ្គ នឹងមានលេខកូដវិញ្ញាបនបត្រនៅទំព័រ My Learning។',
-                ],
-                ];
-                @endphp
-                <div class="space-y-3">
-                    @foreach ($faqs as $i => $faq)
-                    <div class="rounded-sm" style="border:1px solid var(--mist); --i:{{ $i + 1 }}" data-reveal>
-                        <button type="button" class="w-full px-5 py-4 text-left" :aria-expanded="open === {{ $i }}" @click="open = open === {{ $i }} ? null : {{ $i }}">
-                            <span class="font-medium">{{ app()->getLocale() === 'km' ? $faq['km'] : $faq['en'] }}</span>
+            </div>
+        </footer>
+
+        {{-- Language and theme: one pill in the bottom-right corner. --}}
+        <div class="hm-prefs">
+            <form method="POST" action="{{ route('locale') }}">
+                @csrf
+                <input type="hidden" name="locale" value="{{ $hmKm ? 'en' : 'km' }}">
+                <button type="submit" class="hm-pref" aria-label="{{ $hmKm ? 'Switch language to English' : 'Switch language to Khmer' }}">
+                    @if ($hmKm)
+                        <svg class="hm-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#032EA1" /><rect y="5" width="30" height="10" fill="#E00025" /><path fill="#fff" d="M9 13.4h12v1.2H9zM10.2 11.6h9.6v1.8h-9.6zM11.6 9.4h1.2v2.2h-1.2zM14.4 7.4h1.2v4.2h-1.2zM17.2 9.4h1.2v2.2h-1.2z" /></svg>
+                        <span class="hm-km">ខ្មែរ</span>
+                    @else
+                        <svg class="hm-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="hm-uk-clip"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z" /></clipPath><path d="M0,0 v30 h60 v-30 z" fill="#012169" /><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6" /><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#hm-uk-clip)" stroke="#C8102E" stroke-width="4" /><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10" /><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6" /></svg>
+                        <span>EN</span>
+                    @endif
+                </button>
+            </form>
+            <span class="hm-pref-divider" aria-hidden="true"></span>
+            <button type="button" class="hm-pref" @click="toggleTheme($event)"
+                :aria-label="dark ? '{{ __('Switch to light mode') }}' : '{{ __('Switch to dark mode') }}'" :aria-pressed="dark">
+                <svg class="hm-ico-sm hm-spin-in" style="color:#4DA3FF" x-show="dark" x-cloak viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg>
+                <svg class="hm-ico-sm hm-spin-in" style="color:#F59E0B" x-show="!dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></svg>
+                <span x-text="dark ? 'Dark' : 'Light'">Dark</span>
+            </button>
+        </div>
+
+        {{-- Project inspection dialog (filled by the script below) --}}
+        <div class="hm-modal" id="hm-modal" hidden>
+            <div class="hm-dialog" role="dialog" aria-modal="true" aria-labelledby="hm-modal-title">
+                <div class="hm-dialog-head">
+                    <div style="min-width:0">
+                        <h2 id="hm-modal-title" data-f="title"></h2>
+                        <div class="hm-dialog-sub">
+                            <span class="hm-km" data-f="titleKh"></span>
+                            <span class="hm-verified">
+                                <svg class="hm-ico-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" /><path d="m9 12 2 2 4-4" /></svg>
+                                {{ $L('Verified Student', 'និស្សិតផ្ទៀងផ្ទាត់') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="hm-dialog-actions">
+                        <button type="button" class="hm-share" data-share aria-live="polite">
+                            <svg class="hm-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+                            <span data-share-label>{{ $L('Share', 'ចែករំលែក') }}</span>
                         </button>
-                        <div x-show="open === {{ $i }}" x-cloak
-                            x-transition:enter="faq-enter" x-transition:enter-start="faq-from" x-transition:enter-end="faq-to"
-                            x-transition:leave="faq-leave" x-transition:leave-start="faq-to" x-transition:leave-end="faq-from"
-                            class="px-5 pb-4 text-sm" style="color:var(--graphite)">
-                            <p>{{ app()->getLocale() === 'km' ? $faq['a_km'] : $faq['a_en'] }}</p>
+                        <button type="button" class="hm-close" data-close aria-label="{{ $L('Close project details', 'បិទ') }}">
+                            <svg class="hm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="hm-dialog-body">
+                    <div class="hm-shot">
+                        <img data-f="image" alt="">
+                        <span class="hm-grade hm-mono">{{ $L('Grade', 'ពិន្ទុ') }} <span data-f="grade"></span></span>
+                    </div>
+                    <div class="hm-dialog-grid">
+                        <aside>
+                            <div class="hm-idcard">
+                                <div class="hm-person">
+                                    <img class="hm-student-img" style="width:3rem; height:3rem" data-f="studentAvatar" alt="">
+                                    <div style="min-width:0">
+                                        <p class="name" data-f="studentName"></p>
+                                        <p class="role hm-km" data-f="studentNameKh"></p>
+                                    </div>
+                                </div>
+                                <dl class="hm-dl">
+                                    <div><dt>{{ $L('Award', 'ពានរង្វាន់') }}</dt><dd class="award" data-f="badge"></dd></div>
+                                    <div><dt>{{ $L('Curriculum', 'វគ្គសិក្សា') }}</dt><dd data-f="course"></dd></div>
+                                    <div>
+                                        <dt>{{ $L('Likes', 'ចូលចិត្ត') }}</dt>
+                                        <dd>
+                                            <button type="button" class="hm-mini-like" data-modal-like aria-pressed="false" aria-label="{{ $L('Like this project', 'ចូលចិត្តគម្រោងនេះ') }}">
+                                                <svg class="hm-ico-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /></svg>
+                                                <span class="hm-mono" data-modal-count></span>
+                                            </button>
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            <p class="hm-small-head" style="margin-top:1rem">{{ $L('Software Stack', 'កម្មវិធីប្រើប្រាស់') }}</p>
+                            <div class="hm-tools" data-f="tools" style="flex-wrap:wrap"></div>
+                        </aside>
+                        <div class="hm-concept">
+                            <h3>{{ $L('Project Concept', 'គំនិតគម្រោង') }}</h3>
+                            <p data-f="description"></p>
+                            <div class="hm-critique">
+                                <div class="hm-critique-head">
+                                    <div class="hm-person">
+                                        <span class="hm-avatar" style="width:2.5rem; height:2.5rem" role="img" aria-label="{{ $hmTeacher }}">
+                                            <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><circle cx="32" cy="23" r="12.5" /><path d="M7 64c0-14.5 11.2-25 25-25s25 10.5 25 25z" /></svg>
+                                        </span>
+                                        <div style="min-width:0">
+                                            <p class="name">{{ $L('Official Teacher Critique', 'មតិវាយតម្លៃពីលោកគ្រូ') }}</p>
+                                            <p class="role {{ $hmKm ? 'hm-km' : '' }}">{{ $hmKm ? $hmTeacherKh : $hmTeacher }}</p>
+                                        </div>
+                                    </div>
+                                    <b class="hm-mono" data-f="grade"></b>
+                                </div>
+                                <p class="q">“<span data-f="teacherCritique"></span>”</p>
+                            </div>
                         </div>
                     </div>
-                    @endforeach
                 </div>
             </div>
+        </div>
 
-            <!-- Testimonial — types itself out the first time it scrolls into view -->
-            @php
-            $quote = __('"I went from knowing nothing about design to landing freelance work in three months. The feedback loop here is what actually made the difference."');
-            $attribution = __('Sokha Chan — Freelance Designer, Phnom Penh');
-            @endphp
-
-            <div class="max-w-3xl px-6 py-24 mx-auto"
-                x-data="{
-                full: @js($quote),
-                shown: '',
-                done: false,
-                started: false,
-                start() {
-                    if (this.started) return;
-                    this.started = true;
-
-                    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                        this.shown = this.full;
-                        this.done = true;
-                        return;
-                    }
-
-                    let i = 0;
-                    const tick = () => {
-                        this.shown = this.full.slice(0, ++i);
-                        if (i < this.full.length) {
-                            const c = this.full[i - 1];
-                            setTimeout(tick, c === '.' || c === ',' ? 170 : (c === ' ' ? 20 : 28));
-                        } else {
-                            this.done = true;
-                        }
-                    };
-                    setTimeout(tick, 300);
-                }
-             }"
-                x-init="
-                const io = new IntersectionObserver((entries) => {
-                    entries.forEach((entry) => {
-                        if (entry.isIntersecting) { start(); io.disconnect(); }
-                    });
-                }, { threshold: 0.4 });
-                io.observe($el);
-             ">
-                <div class="pl-6 sm:pl-8" style="border-left:3px solid var(--action)" data-reveal>
-                    {{-- Screen readers get the whole quote at once; the animated copy is decorative --}}
-                    <p class="sr-only">{{ $quote }} — {{ $attribution }}</p>
-
-                    <p aria-hidden="true" class="font-display text-2xl sm:text-3xl leading-snug mb-6 min-h-[10.5rem] sm:min-h-[9.5rem]"><span x-text="shown"></span><span class="type-caret" :class="done && 'is-done'"></span></p>
-
-                    <div aria-hidden="true" class="text-sm transition-opacity duration-700"
-                        :class="done ? 'opacity-60' : 'opacity-0'">{{ $attribution }}</div>
-                </div>
-            </div>
-
-            <!-- CTA -->
-            <div class="max-w-6xl px-6 mx-auto pb-28">
-                <div class="relative px-10 py-16 text-center rounded-sm" style="background:var(--ink); color:var(--paper)" data-reveal>
-                    <span class="crop-mark tl" style="border-color:var(--action)"></span>
-                    <span class="crop-mark tr" style="border-color:var(--action)"></span>
-                    <span class="crop-mark bl" style="border-color:var(--action)"></span>
-                    <span class="crop-mark br" style="border-color:var(--action)"></span>
-
-                    <h2 class="mb-3 text-3xl font-bold font-display">{{ __('Your first critique could be this week.') }}</h2>
-                    <p class="mb-8 opacity-70">{{ __('Join free, pick a course, and submit your first piece for review.') }}</p>
-                    <a href="{{ route('register') }}" class="inline-flex items-center px-6 py-3 font-medium transition-opacity rounded-sm hover:opacity-85" style="background:var(--paper); color:var(--ink)">
-                        {{ __('Create a free account') }}
-                    </a>
-                </div>
-            </div>
-
+        <div class="hm-toast" id="hm-toast" role="status" aria-live="polite" hidden>
+            <svg class="hm-ico-sm" style="color:#34D399" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>
+            <span data-toast-text></span>
+        </div>
     </div>
 
-    <!-- Footer -->
-    <footer style="border-top:1px solid var(--mist)">
-        <div class="grid max-w-6xl gap-10 px-6 mx-auto py-14 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-                <p class="max-w-xs text-sm opacity-60">{{ __('A classroom for designers who want to learn by doing.') }}</p>
-            </div>
-            <div>
-                <h4 class="mb-4 text-xs font-semibold tracking-wide uppercase opacity-60">{{ __('Learn') }}</h4>
-                <ul class="space-y-2 text-sm">
-                    {{-- "All Courses" left the footer: "Courses" in the menu already goes there. --}}
-                    <li><a href="{{ route('courses', ['free' => 1]) }}" class="transition-opacity hover:opacity-70">{{ __('Free Courses') }}</a></li>
-                    <li><a href="{{ route('learning.index') }}" class="transition-opacity hover:opacity-70">{{ __('Certificates') }}</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="mb-4 text-xs font-semibold tracking-wide uppercase opacity-60">{{ __('Company') }}</h4>
-                <ul class="space-y-2 text-sm">
-                    <li><a href="{{ route('about') }}" class="transition-opacity hover:opacity-70">{{ __('About') }}</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="mb-4 text-xs font-semibold tracking-wide uppercase opacity-60">{{ __('Follow') }}</h4>
-                <ul class="space-y-2 text-sm">
-                    <li>
-                        <a href="{{ config('social.instagram') }}" target="_blank" rel="noopener noreferrer" aria-label="{{ __('Instagram (opens in a new tab)') }}" class="transition-opacity hover:opacity-70">Instagram</a>
-                    </li>
-                    <li>
-                        <button type="button"
-                            aria-haspopup="dialog"
-                            aria-label="{{ __('Telegram (show QR code)') }}"
-                            x-data
-                            x-on:click="$dispatch('open-telegram-qr')"
-                            class="transition-opacity pd-qr-trigger hover:opacity-70">Telegram</button>
-                        @include('partials._telegram-qr-dialog')
-                    </li>
-                    <li>
-                        <a href="{{ config('social.facebook') }}" target="_blank" rel="noopener noreferrer" aria-label="{{ __('Facebook (opens in a new tab)') }}" class="transition-opacity hover:opacity-70">Facebook</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <div style="border-top:1px solid var(--mist)">
-            <div class="flex flex-col items-center justify-between max-w-6xl gap-2 px-6 py-6 mx-auto text-xs sm:flex-row opacity-60">
-                <span>&copy; Piseth.Design Classroom. All rights reserved.</span>
-                <span>{{ __('Made in Siem Reap, Cambodia') }}</span>
-            </div>
-        </div>
-    </footer>
+    <script>
+        window.hmProjects = @json(collect($hmProjects)->keyBy('id'));
+        window.hmText = @json($hmText);
+    </script>
 
     <script>
-        /* ---------- Scroll reveal ----------
-           Each [data-reveal] block rises in once, the first time it reaches the
-           viewport. html.js-reveal (set in <head>) is what hid them; if this
-           script cannot observe, it removes that class so nothing stays hidden. */
-        (function() {
-            var root = document.documentElement;
-            if (!root.classList.contains('js-reveal')) return;
+        (function () {
+            'use strict';
+            var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var store = {
+                get: function (k, fb) { try { var v = localStorage.getItem(k); return v === null ? fb : JSON.parse(v); } catch (e) { return fb; } },
+                set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+            };
+            function restart(el, cls) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 
-            try {
-                var io = new IntersectionObserver(function(entries) {
-                    entries.forEach(function(entry) {
-                        /* Reveal on entry, and also catch anything already scrolled
-                           clean past: a jump to an anchor, End, or a restored scroll
-                           position must never leave a section sitting at opacity 0. */
-                        if (!entry.isIntersecting && entry.boundingClientRect.top > 0) return;
-                        entry.target.classList.add('is-in');
-                        io.unobserve(entry.target);
+            /* ---------- jelly filter tabs ----------
+               The pill springs to the clicked tab with overshoot, squashes and
+               stretches as it lands, a blurred trail follows it, a gloss shimmer
+               sweeps across and a few sparks pop out. */
+            var SPARKS = [[-29, -20], [29, -20], [-38, 3], [38, 3], [-19, 22], [19, 22]];
+            document.querySelectorAll('[data-jelly-tabs]').forEach(function (root) {
+                var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
+                var pill = root.querySelector('.hm-jelly');
+                var trail = root.querySelector('.hm-jelly-trail');
+                var blob = root.querySelector('.hm-jelly-blob');
+                var sparks = root.querySelector('.hm-sparks');
+                var items = function () { return document.querySelectorAll(root.getAttribute('data-target')); };
+                var active = 0;
+
+                function place(animate) {
+                    var t = tabs[active];
+                    if (!t) return;
+                    if (!animate) root.classList.add('is-static');
+                    [pill, trail].forEach(function (el) {
+                        el.style.width = t.offsetWidth + 'px';
+                        el.style.transform = 'translateX(' + t.offsetLeft + 'px)';
                     });
-                }, {
-                    rootMargin: '0px 0px -8% 0px',
-                    threshold: 0.12
-                });
-                document.querySelectorAll('[data-reveal]').forEach(function(el) {
-                    io.observe(el);
-                });
-            } catch (e) {
-                root.classList.remove('js-reveal');
-            }
-        })();
-    </script>
-
-    {{--
-        HERO FAN
-        Every card sits at the same spot and is rotated around a pivot far below it, which
-        is what bends the row into an arc. "pos" is the card index that is currently in the
-        centre. Changing pos slides the whole fan left (pos goes up) or right (pos goes down).
-
-        pos = base (drag / arrows) + sway (automatic left-right) + scroll (page position)
-
-        On load the cards pop up one after another, centre card first, while the arc opens.
-    --}}
-    <script>
-        (function() {
-            var fan = document.getElementById('fan');
-            if (!fan) return;
-
-            var cards = [].slice.call(fan.querySelectorAll('.fan-card'));
-            var faces = cards.map(function(c) {
-                return c.querySelector('.fan-face');
-            });
-            var N = cards.length;
-            if (!N) return;
-
-            var caption = document.getElementById('fan-caption');
-            var prevBtn = document.getElementById('fan-prev');
-            var nextBtn = document.getElementById('fan-next');
-            var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            /* Coarse pointer (touch) or a small viewport: the visitor's thumb already
-               drives the fan directly, so the automatic drift is skipped rather than
-               fought against — and it's what lets the render loop below come to a
-               full stop instead of running every frame forever on a phone. */
-            var coarse = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 640px)').matches;
-            var still = reduce || coarse;
-
-            /* ---- Tuning knobs ---- */
-            var STEP = 10; // degrees between two neighbouring cards (bigger = wider arc)
-            var SWAY = still ? 0 : 2.2; // how many cards the fan drifts each way on its own (0 = no auto movement)
-            var PERIOD = 16; // seconds for one full left, right, back cycle
-            var SCROLL_K = 0; // the fan no longer turns while the page scrolls — it read as spinning, not following
-            var VISIBLE = Math.min(4, N / 2 - 0.5); // cards further than this from the centre are hidden
-
-            /* ---- Entrance: the cards slide up and fade in ---- */
-            var POP_DUR = 0.9; // seconds each card takes to rise into place
-            var POP_STAGGER = 0.09; // delay between cards, centre first and then outward
-            var POP_START = 0.1; // seconds before the first card rises
-            var POP_RISE = 0.34; // how far below its spot a card starts, in card heights
-            var SPREAD_TIME = 1.4; // seconds the arc takes to open up
-            var INTRO_END = POP_START + VISIBLE * POP_STAGGER + POP_DUR;
-            /* On first load the cards come last in the hero's sequence: after the
-               header stage (see "HEADER STAGE" in the CSS). If the
-               fan only scrolls into view later, it starts straight away. */
-            var HERO_DELAY = reduce ? 0 : 1.25 + (document.documentElement.classList.contains('js-intro') ? 2.05 : 0);
-            var loadedAt = performance.now();
-
-            /* ---- State ---- */
-            var base = 0; // where the visitor parked the fan
-            var target = null; // set while an arrow button is animating to the next card
-            var velocity = 0; // leftover speed after a drag, in cards per second
-            var clock = 0; // drives the sway
-            var rate = 0; // 1 = sway running, 0 = paused (hover / drag / intro); eases up once the pop-up is done
-            var paused = false;
-            var dragging = false;
-            var pointer = null;
-            var suppressClick = false;
-            var hovered = -1;
-            var scrollNow = 0;
-            var scrollGoal = 0;
-            var introStarted = false;
-            var introClock = 0;
-            var delay = [];
-            var popDone = [];
-            var rise = 200; // pixels, measured from the card height
-            var spacing = 200; // pixels between two neighbouring cards at the centre
-            var shown = cards.map(function() {
-                return false;
-            });
-            var lastNear = -1;
-            var raf = 0;
-            var last = 0;
-            var onScreen = true;
-
-            function clamp(v, a, b) {
-                return Math.max(a, Math.min(b, v));
-            }
-
-            /* Fast start, long soft landing: the "slide up" of the entrance */
-            function outQuart(t) {
-                var u = 1 - t;
-                return 1 - u * u * u * u;
-            }
-
-            function beginIntro() {
-                if (introStarted) return;
-                introStarted = true;
-                /* A negative clock holds the cards back until the hero sequence reaches them */
-                introClock = reduce ? 99 : -Math.max(0, HERO_DELAY - (performance.now() - loadedAt) / 1000);
-                start();
-            }
-
-            function wrap(d) {
-                return d - N * Math.floor((d + N / 2) / N);
-            }
-
-            function measure() {
-                var w = cards[0].offsetWidth;
-                var h = cards[0].offsetHeight;
-                /* pivot sits 3.6 card-widths below the card, matching --pivot in the CSS */
-                spacing = (w * 3.6 + h / 2) * STEP * Math.PI / 180;
-                rise = h * POP_RISE;
-                start();
-            }
-
-            function readScroll() {
-                scrollGoal = clamp(window.scrollY, 0, 1200) * SCROLL_K;
-                if (SCROLL_K) start();
-            }
-
-            function planPops() {
-                /* Cards nearest the centre pop first, the outer ones follow */
-                for (var i = 0; i < N; i++) {
-                    var a = Math.abs(wrap(i - (base + scrollNow)));
-                    delay[i] = POP_START + Math.min(a, VISIBLE) * POP_STAGGER;
-                    popDone[i] = false;
+                    if (!animate) { void root.offsetWidth; root.classList.remove('is-static'); }
                 }
-            }
 
-            function render() {
-                var pos = base + SWAY * Math.sin(clock * 2 * Math.PI / PERIOD) + scrollNow;
-                var spreadT = clamp((introClock - 0.1) / SPREAD_TIME, 0, 1);
-                var spread = 0.3 + 0.7 * (1 - Math.pow(1 - spreadT, 3));
-                var nearest = 0;
-                var nearestAbs = 1e9;
+                function burst() {
+                    sparks.innerHTML = '';
+                    if (reduce) return;
+                    SPARKS.forEach(function (d) {
+                        var s = document.createElement('i');
+                        s.style.setProperty('--dx', d[0] + 'px');
+                        s.style.setProperty('--dy', d[1] + 'px');
+                        sparks.appendChild(s);
+                    });
+                }
 
-                for (var i = 0; i < N; i++) {
-                    var d = wrap(i - pos);
-                    var a = Math.abs(d);
-                    var el = cards[i];
-                    var p = introStarted ? clamp((introClock - delay[i]) / POP_DUR, 0, 1) : 0;
+                function filter(value) {
+                    items().forEach(function (el) {
+                        var show = value === '__all' || el.getAttribute('data-category') === value;
+                        if (show && el.hidden) { el.hidden = false; restart(el, 'is-in'); }
+                        else if (!show) { el.hidden = true; }
+                    });
+                }
 
-                    if (a > VISIBLE || p <= 0) {
-                        if (shown[i]) {
-                            el.style.visibility = 'hidden';
-                            shown[i] = false;
-                        }
-                        continue;
-                    }
-                    if (!shown[i]) {
-                        el.style.visibility = 'visible';
-                        shown[i] = true;
-                    }
-
-                    el.style.transform = 'rotate(' + (d * STEP * spread).toFixed(3) + 'deg)';
-                    el.style.opacity = (clamp((VISIBLE - a) / 1.1, 0, 1) * clamp(p * 1.7, 0, 1)).toFixed(3);
-                    el.style.zIndex = (i === hovered) ? 400 : 200 - Math.round(a * 10);
-
-                    if (p < 1) {
-                        var eb = outQuart(p);
-                        faces[i].style.transform = 'translateY(' + ((1 - eb) * rise).toFixed(1) + 'px) scale(' + (0.94 + 0.06 * eb).toFixed(3) + ')';
-                        popDone[i] = false;
-                    } else if (!popDone[i]) {
-                        faces[i].style.transform = ''; /* hand control back to the CSS hover effect */
-                        popDone[i] = true;
-                    }
-
-                    if (a < nearestAbs) {
-                        nearestAbs = a;
-                        nearest = i;
+                function select(i, focus) {
+                    if (i === active) return;
+                    tabs[active].setAttribute('aria-selected', 'false');
+                    tabs[active].tabIndex = -1;
+                    active = i;
+                    var t = tabs[i];
+                    t.setAttribute('aria-selected', 'true');
+                    t.tabIndex = 0;
+                    if (focus) t.focus();
+                    place(true);
+                    restart(blob, 'is-jelly');
+                    restart(t.querySelector('span'), 'is-pop');
+                    burst();
+                    filter(t.getAttribute('data-value'));
+                    if (root.scrollWidth > root.clientWidth) {
+                        root.scrollTo({ left: t.offsetLeft - (root.clientWidth - t.offsetWidth) / 2, behavior: reduce ? 'auto' : 'smooth' });
                     }
                 }
 
-                if (nearest !== lastNear) {
-                    lastNear = nearest;
-                    if (caption) caption.textContent = cards[nearest].getAttribute('data-title') || '';
-                }
-            }
-
-            function frame(now) {
-                raf = 0;
-                var dt = Math.min(0.05, (now - last) / 1000);
-                last = now;
-
-                if (introStarted) introClock += dt;
-
-                if (!dragging) {
-                    if (target !== null) {
-                        base += (target - base) * (1 - Math.exp(-dt * 7));
-                        if (Math.abs(target - base) < 0.002) {
-                            base = target;
-                            target = null;
-                        }
-                    } else if (Math.abs(velocity) > 0.01) {
-                        base += velocity * dt;
-                        velocity *= Math.exp(-dt * 3.2);
-                    } else {
-                        velocity = 0;
-                    }
-                }
-
-                /* Sway waits for the pop-up to finish, and eases to a stop while hovering or dragging */
-                var swayReady = introClock > INTRO_END - 0.2;
-                var wantRate = (paused || dragging || !swayReady) ? 0 : 1;
-                rate += (wantRate - rate) * (1 - Math.exp(-dt * 4));
-                clock += dt * rate;
-
-                scrollNow += (scrollGoal - scrollNow) * (1 - Math.exp(-dt * 5));
-
-                render();
-
-                /* Nothing left to animate: stop rescheduling instead of redrawing forever.
-                   Whatever would move the fan again (a drag, an arrow click, sway easing
-                   back in after a hover, a scroll change) calls start() to pick it back up. */
-                var atRest = !dragging && target === null && Math.abs(velocity) < 0.001 &&
-                    rate < 0.001 && Math.abs(scrollGoal - scrollNow) < 0.01 &&
-                    (!introStarted || introClock > INTRO_END + 0.3);
-
-                if (onScreen && !document.hidden && !atRest) raf = requestAnimationFrame(frame);
-            }
-
-            function start() {
-                if (raf) return;
-                last = performance.now();
-                raf = requestAnimationFrame(frame);
-            }
-
-            /* ---- Arrow buttons and keyboard ---- */
-            function go(dir) {
-                velocity = 0;
-                target = Math.round(target !== null ? target : base) + dir;
-                start();
-            }
-            if (prevBtn) prevBtn.addEventListener('click', function() {
-                go(-1);
-            });
-            if (nextBtn) nextBtn.addEventListener('click', function() {
-                go(1);
-            });
-            fan.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowLeft') {
-                    go(-1);
-                } else if (e.key === 'ArrowRight') {
-                    go(1);
-                }
-            });
-
-            /* ---- Hovered card comes to the front ---- */
-            cards.forEach(function(el, i) {
-                el.addEventListener('pointerenter', function(e) {
-                    if (e.pointerType === 'mouse') hovered = i;
-                });
-                el.addEventListener('pointerleave', function() {
-                    if (hovered === i) hovered = -1;
-                });
-            });
-
-            /* ---- Drag / swipe ---- */
-            fan.addEventListener('pointerdown', function(e) {
-                if (e.pointerType === 'mouse' && e.button !== 0) return;
-                if (e.target.closest && e.target.closest('.fan-ui')) return;
-                pointer = {
-                    id: e.pointerId,
-                    x: e.clientX,
-                    base: base,
-                    lastX: e.clientX,
-                    lastT: performance.now(),
-                    moved: false
-                };
-                target = null;
-                velocity = 0;
-            });
-
-            fan.addEventListener('pointermove', function(e) {
-                if (!pointer || e.pointerId !== pointer.id) return;
-                var dx = e.clientX - pointer.x;
-
-                if (!pointer.moved && Math.abs(dx) > 6) {
-                    pointer.moved = true;
-                    dragging = true;
-                    fan.classList.add('is-dragging');
-                    start();
-                    try {
-                        fan.setPointerCapture(e.pointerId);
-                    } catch (err) {}
-                }
-                if (!pointer.moved) return;
-
-                base = pointer.base - dx / spacing;
-
-                var now = performance.now();
-                var dtm = (now - pointer.lastT) / 1000;
-                if (dtm > 0) {
-                    var v = -(e.clientX - pointer.lastX) / spacing / dtm;
-                    velocity = velocity * 0.6 + v * 0.4;
-                }
-                pointer.lastX = e.clientX;
-                pointer.lastT = now;
-            });
-
-            function endDrag(e) {
-                if (!pointer || (e && e.pointerId !== pointer.id)) return;
-                if (pointer.moved) {
-                    suppressClick = true; /* a drag must not open the course link under the cursor */
-                    setTimeout(function() {
-                        suppressClick = false;
-                    }, 60);
-                    if (performance.now() - pointer.lastT > 80) velocity = 0;
-                    velocity = clamp(velocity, -6, 6);
-                }
-                dragging = false;
-                pointer = null;
-                fan.classList.remove('is-dragging');
-            }
-            fan.addEventListener('pointerup', endDrag);
-            fan.addEventListener('pointercancel', endDrag);
-            fan.addEventListener('lostpointercapture', endDrag);
-
-            fan.addEventListener('click', function(e) {
-                if (suppressClick) {
+                tabs.forEach(function (t, i) { t.addEventListener('click', function () { select(i); }); });
+                root.addEventListener('keydown', function (e) {
+                    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
                     e.preventDefault();
-                    e.stopPropagation();
+                    select((active + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length, true);
+                });
+
+                place(false);
+                if (window.ResizeObserver) new ResizeObserver(function () { place(false); }).observe(root.querySelector('.hm-tabs-track'));
+                if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { place(false); });
+            });
+
+            /* ---------- wishlist (this browser only) ---------- */
+            var wish = store.get('pd-wishlist', []);
+            if (!Array.isArray(wish)) wish = [];
+            document.querySelectorAll('[data-wish]').forEach(function (btn) {
+                var id = btn.getAttribute('data-wish');
+                function paint() {
+                    var on = wish.indexOf(id) !== -1;
+                    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    btn.setAttribute('aria-label', btn.getAttribute(on ? 'data-label-on' : 'data-label-off'));
                 }
-            }, true);
-
-            /* ---- Pause the automatic sway while someone is looking closely ---- */
-            fan.addEventListener('pointerenter', function(e) {
-                if (e.pointerType === 'mouse') paused = true;
-            });
-            fan.addEventListener('pointerleave', function() {
-                paused = false;
-                start();
-            });
-            fan.addEventListener('focusin', function() {
-                paused = true;
-            });
-            fan.addEventListener('focusout', function() {
-                paused = false;
-                start();
+                paint();
+                btn.addEventListener('click', function () {
+                    wish = wish.indexOf(id) !== -1 ? wish.filter(function (x) { return x !== id; }) : wish.concat(id);
+                    store.set('pd-wishlist', wish);
+                    paint();
+                });
             });
 
-            /* ---- Page scroll nudges the fan, resize re-measures ---- */
-            window.addEventListener('scroll', readScroll, {
-                passive: true
-            });
-            window.addEventListener('resize', measure, {
-                passive: true
-            });
-            document.addEventListener('visibilitychange', function() {
-                if (!document.hidden) start();
+            /* ---------- likes (this browser only) ---------- */
+            var liked = store.get('pd-liked', []);
+            if (!Array.isArray(liked)) liked = [];
+            var projects = window.hmProjects || {};
+            function likeCount(id) { return (projects[id] ? projects[id].likes : 0) + (liked.indexOf(id) !== -1 ? 1 : 0); }
+            function paintLikes() {
+                document.querySelectorAll('[data-like]').forEach(function (btn) {
+                    var id = btn.getAttribute('data-like');
+                    var on = liked.indexOf(id) !== -1;
+                    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    btn.setAttribute('aria-label', (on ? hmText.unlike : hmText.like) + ' (' + likeCount(id) + ')');
+                    btn.querySelector('[data-count]').textContent = likeCount(id);
+                });
+                if (openId) {
+                    var on = liked.indexOf(openId) !== -1;
+                    modalLike.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    modal.querySelector('[data-modal-count]').textContent = likeCount(openId);
+                }
+            }
+            function toggleLike(id) {
+                liked = liked.indexOf(id) !== -1 ? liked.filter(function (x) { return x !== id; }) : liked.concat(id);
+                store.set('pd-liked', liked);
+                paintLikes();
+            }
+            document.querySelectorAll('[data-like]').forEach(function (btn) {
+                btn.addEventListener('click', function (e) { e.stopPropagation(); toggleLike(btn.getAttribute('data-like')); });
+                btn.addEventListener('keydown', function (e) { e.stopPropagation(); });
             });
 
-            /* ---- The pop-up plays the first time the fan is on screen; the loop stops while it is not ---- */
-            if ('IntersectionObserver' in window) {
-                new IntersectionObserver(function(entries) {
-                    onScreen = entries[0].isIntersecting;
-                    if (onScreen) {
-                        beginIntro();
-                        start();
+            /* ---------- project dialog ---------- */
+            var modal = document.getElementById('hm-modal');
+            var modalLike = modal.querySelector('[data-modal-like]');
+            var shareBtn = modal.querySelector('[data-share]');
+            var shareLabel = modal.querySelector('[data-share-label]');
+            var toast = document.getElementById('hm-toast');
+            var openId = null, lastFocus = null, shareTimer = 0, toastTimer = 0;
+
+            function fill(p) {
+                modal.querySelectorAll('[data-f]').forEach(function (el) {
+                    var key = el.getAttribute('data-f');
+                    if (key === 'image' || key === 'studentAvatar') {
+                        el.src = p[key];
+                        el.alt = key === 'image' ? p.title : p.studentName;
+                    } else if (key === 'tools') {
+                        el.innerHTML = '';
+                        p.tools.forEach(function (tool) {
+                            var s = document.createElement('span');
+                            s.className = 'hm-tool hm-mono';
+                            s.textContent = tool;
+                            el.appendChild(s);
+                        });
+                    } else {
+                        el.textContent = p[key];
                     }
-                }, {
-                    threshold: 0.15
-                }).observe(fan);
-            }
-            if (reduce || !('IntersectionObserver' in window)) beginIntro();
-
-            measure();
-            readScroll();
-            scrollNow = scrollGoal;
-            planPops();
-            render();
-            start();
-        })();
-    </script>
-
-
-    <script>
-        /* Header stage behaviour. Everything here is decoration: with no
-           JavaScript the stage is complete, just still. Skipped entirely for
-           reduced motion, apart from fitting the word to its column.
-             fit      sizes the name so it stays clear of the portrait's face
-                      (0.68 of the layout width on desktop; lower = smaller)
-             pointer  writes --mx / --my (eased) for tilt and parallax
-             scroll   writes --sy (0..1 while the stage leaves the screen) */
-        (function() {
-            var stage = document.getElementById('stage');
-            var word = document.getElementById('stage-word');
-            if (!stage || !word) return;
-
-            var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            var fine = window.matchMedia('(pointer: fine)').matches;
-
-            /* ---- fit ---- */
-            function fit() {
-                var inner = stage.querySelector('.stage-inner');
-                var narrow = window.matchMedia('(max-width: 900px)').matches;
-                var avail = inner.clientWidth - 48;
-                var left = stage.querySelector('.stage-left').getBoundingClientRect().width;
-                var target = narrow ? avail : Math.min(avail * 0.68, left + 40);
-                word.style.fontSize = '100px';
-                var w = word.getBoundingClientRect().width;
-                if (w > 0) word.style.fontSize = Math.min(100 * target / w, 340) + 'px';
-            }
-            fit();
-            if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
-            var rt;
-            window.addEventListener('resize', function() {
-                clearTimeout(rt);
-                rt = setTimeout(fit, 80);
-            });
-
-            if (reduce) return;
-
-            /* ---- pointer + scroll ---- */
-            var tx = 0,
-                ty = 0,
-                cx = 0,
-                cy = 0,
-                raf = 0,
-                sraf = 0;
-
-            function tick() {
-                cx += (tx - cx) * 0.075;
-                cy += (ty - cy) * 0.075;
-                stage.style.setProperty('--mx', cx.toFixed(3));
-                stage.style.setProperty('--my', cy.toFixed(3));
-                raf = (Math.abs(tx - cx) > 0.002 || Math.abs(ty - cy) > 0.002) ? requestAnimationFrame(tick) : 0;
-            }
-
-            function kick() {
-                if (!raf) raf = requestAnimationFrame(tick);
-            }
-
-            function scrollUpdate() {
-                sraf = 0;
-                var r = stage.getBoundingClientRect();
-                stage.style.setProperty('--sy', Math.min(1, Math.max(0, -r.top / Math.max(1, r.height))).toFixed(3));
-            }
-
-            if (fine) {
-                stage.addEventListener('pointermove', function(e) {
-                    var r = stage.getBoundingClientRect();
-                    var x = e.clientX - r.left,
-                        y = e.clientY - r.top;
-                    tx = (x / r.width - 0.5) * 2;
-                    ty = (y / r.height - 0.5) * 2;
-                    kick();
-                });
-                stage.addEventListener('pointerleave', function() {
-                    tx = 0;
-                    ty = 0;
-                    kick();
                 });
             }
 
-            window.addEventListener('scroll', function() {
-                if (!sraf) sraf = requestAnimationFrame(scrollUpdate);
-            }, {
-                passive: true
+            function open(id) {
+                var p = projects[id];
+                if (!p) return;
+                openId = id;
+                lastFocus = document.activeElement;
+                fill(p);
+                paintLikes();
+                modal.hidden = false;
+                document.documentElement.style.overflow = 'hidden';
+                modal.querySelector('[data-close]').focus();
+            }
+
+            function close() {
+                if (!openId) return;
+                modal.hidden = true;
+                openId = null;
+                document.documentElement.style.overflow = '';
+                if (location.hash.indexOf('#showcase-') === 0) history.replaceState(null, '', location.pathname + location.search);
+                if (lastFocus && lastFocus.focus) lastFocus.focus();
+            }
+
+            document.querySelectorAll('[data-project]').forEach(function (card) {
+                card.addEventListener('click', function () { open(card.getAttribute('data-project')); });
+                card.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(card.getAttribute('data-project')); }
+                });
             });
+            modal.addEventListener('mousedown', function (e) { if (e.target === modal) close(); });
+            modal.querySelector('[data-close]').addEventListener('click', close);
+            modalLike.addEventListener('click', function () { if (openId) toggleLike(openId); });
+            document.addEventListener('keydown', function (e) {
+                if (!openId) return;
+                if (e.key === 'Escape') { close(); return; }
+                if (e.key === 'Tab') {
+                    var nodes = modal.querySelectorAll('button, [href], [tabindex]:not([tabindex="-1"])');
+                    var first = nodes[0], last = nodes[nodes.length - 1];
+                    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+            });
+
+            function showToast(text) {
+                toast.querySelector('[data-toast-text]').textContent = text;
+                toast.hidden = false;
+                restart(toast, 'hm-toast');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(function () { toast.hidden = true; }, 2400);
+            }
+
+            function copy(text) {
+                if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return legacy(text); });
+                return Promise.resolve(legacy(text));
+            }
+            function legacy(text) {
+                try {
+                    var a = document.createElement('textarea');
+                    a.value = text; a.setAttribute('readonly', ''); a.style.position = 'fixed'; a.style.opacity = '0';
+                    document.body.appendChild(a); a.select();
+                    var ok = document.execCommand('copy');
+                    document.body.removeChild(a);
+                    return ok;
+                } catch (e) { return false; }
+            }
+
+            shareBtn.addEventListener('click', function () {
+                if (!openId) return;
+                var url = location.origin + location.pathname + location.search + '#showcase-' + openId;
+                copy(url).then(function (ok) {
+                    shareBtn.classList.toggle('is-copied', ok);
+                    shareLabel.textContent = ok ? hmText.copied : hmText.share;
+                    showToast(ok ? hmText.copiedToast : hmText.copyFailed);
+                    clearTimeout(shareTimer);
+                    shareTimer = setTimeout(function () { shareBtn.classList.remove('is-copied'); shareLabel.textContent = hmText.share; }, 2000);
+                });
+            });
+
+            paintLikes();
+
+            /* A shared link (#showcase-sw-1) opens that project. */
+            var m = location.hash.match(/^#showcase-(.+)$/);
+            if (m && projects[m[1]]) open(m[1]);
         })();
     </script>
 </body>
