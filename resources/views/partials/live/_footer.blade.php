@@ -3,7 +3,10 @@
     $hmKm = app()->getLocale() === 'km';
     $L = fn (string $en, string $km) => $hmKm ? $km : $en;
     $icon = fn (string $name, string $class = 'i4') => \App\Support\LiveIcon::svg($name, $class);
-    $liveCourses = \App\Models\Course::query()->published()->orderBy('sort_order')->take(4)->get();
+    // A page can hand in its own list (the Course Library passes the courses it is showing).
+    $liveCourses = isset($footerCourses)
+        ? collect($footerCourses)->take(4)
+        : \App\Models\Course::query()->published()->orderBy('sort_order')->take(4)->get();
 @endphp
 <footer class="hm-footer">
     <div class="hm-wrap hm-footer-in">

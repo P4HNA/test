@@ -10,7 +10,7 @@ use App\Models\Course;
  */
 class CoursePicture
 {
-    private const STOCK = [
+    public const STOCK = [
         'ps' => 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80',
         'ai' => 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
         'id' => 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',

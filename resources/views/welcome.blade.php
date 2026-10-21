@@ -8,64 +8,12 @@
     $icon = fn (string $name, string $class = 'i4') => \App\Support\LiveIcon::svg($name, $class);
     $blank = \App\Support\LiveIcon::blankProfile();
 
-    // ---------- courses: real courses, shown with the live card design ----------
-    $hmPhotos = [
-        'ps' => 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80',
-        'ai' => 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-        'id' => 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
-        'gd' => 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=800&auto=format&fit=crop&q=80',
-        'ux' => 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80',
-        'mo' => 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80',
-    ];
-    // course mark => [software chips, software line, photo, filter group]
-    $hmSoftware = [
-        'ps' => [['Ps'], 'Photoshop', 'ps', 'Graphic Design'],
-        'ai' => [['Ai'], 'Illustrator', 'ai', 'Graphic Design'],
-        'id' => [['Id'], 'InDesign', 'id', 'Graphic Design'],
-        'gd' => [['Ps', 'Ai', 'Id'], 'Photoshop + Illustrator + InDesign', 'gd', 'Graphic Design'],
-        'fg' => [['Fg'], 'Figma', 'ux', 'UX/UI Design'],
-        'xd' => [['Xd'], 'Adobe XD', 'ux', 'UX/UI Design'],
-        'ae' => [['Ae'], 'After Effects', 'mo', 'Motion Graphics'],
-        'pr' => [['Pr'], 'Premiere Pro', 'mo', 'Motion Graphics'],
-    ];
-    $hmGroupOf = function (string $category): string {
-        $c = strtolower($category);
-        if (preg_match('/ux|ui|figma|xd|web|app/', $c)) return 'UX/UI Design';
-        if (preg_match('/motion|after effects|animation|video|premiere/', $c)) return 'Motion Graphics';
-        return 'Graphic Design';
-    };
-
+    // ---------- courses: real courses, shown with the live card design (App\Support\CourseCard) ----------
     $hmUser = auth()->user();
     $hmUser?->loadMissing('enrollments');
 
-    $hmCards = collect($courses ?? [])->values()->map(function ($course) use ($hmSoftware, $hmPhotos, $hmGroupOf, $hmUser, $L) {
-        $mark = trim((string) $course->mark);
-        $sw = $hmSoftware[strtolower($mark)] ?? null;
-        $category = (string) $course->category;
-        $minutes = $course->durationMinutes();
-        $enrollment = $hmUser?->enrollmentFor($course);
-        $lesson = $enrollment?->continueLesson();
-        $description = trim(strip_tags((string) $course->localized('description'))) ?: trim((string) $course->localized('subtitle'));
-
-        return [
-            'course' => $course,
-            'title' => $course->localized('title'),
-            'chips' => $sw[0] ?? array_values(array_filter([$mark])),
-            'tools' => $sw[1] ?? ($category ?: 'Design'),
-            'photo' => $course->thumbnailSrc() ?: $hmPhotos[$sw[2] ?? 'gd'],
-            'group' => $sw[3] ?? $hmGroupOf($category),
-            'category' => $category,
-            'description' => \Illuminate\Support\Str::limit($description, 240),
-            'level' => $course->level ? __($course->level) : '',
-            'duration' => $minutes > 0 ? $course->formattedDuration() : '',
-            'lessons' => (int) $course->lessons_count,
-            'enrolled' => $enrollment !== null,
-            'progress' => $enrollment ? $course->progressPercent($hmUser) : 0,
-            'continue' => ($lesson && filled($lesson->getRouteKey())) ? route('courses.lessons.show', [$course, $lesson]) : route('courses.show', $course),
-            'url' => route('courses.show', $course),
-        ];
-    });
-    $hmGroups = ['Graphic Design', 'UX/UI Design', 'Motion Graphics'];
+    $hmCards = collect($courses ?? [])->values()->map(fn ($course) => \App\Support\CourseCard::make($course, $hmUser));
+    $hmGroups = \App\Support\CourseCard::GROUPS;
 
     // ---------- teacher ----------
     $hmSkills = [

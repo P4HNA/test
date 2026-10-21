@@ -13,13 +13,15 @@
     pill, and the Alpine scope (`dark`, `toggleTheme`) they rely on.
     `active` underlines the matching tab: home, courses, resources, about,
     activity or profile. `promotion` shows the promotion bar above the top bar
-    (the homepage passes it; other pages don't).
+    (the homepage passes it; other pages don't). `footerCourses` replaces the
+    footer's course links (null = the first four published courses).
 --}}
 @props([
     'title' => 'Piseth.Design Classroom',
     'active' => null,
     'promotion' => null,
     'mainClass' => 'hm-main',
+    'footerCourses' => null,
 ])
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
@@ -109,7 +111,7 @@
             {{ $slot }}
         </main>
 
-        @include('partials.live._footer')
+        @include('partials.live._footer', ['footerCourses' => $footerCourses])
 
         @include('partials.live._bottom-nav', ['liveActive' => $active])
 
