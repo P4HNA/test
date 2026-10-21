@@ -208,7 +208,8 @@
     .hm-hrow { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
     .hm-hname { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; line-height: 1rem; font-weight: 600; color: var(--strong); }
     .hm-hmail { margin: .125rem 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--soft); }
-    .hm-hrole { flex-shrink: 0; padding: .125rem .5rem; border-radius: 9999px; font-size: 9px; font-weight: 700; text-transform: uppercase; background: #ECFDF5; color: #059669; border: 1px solid rgba(16, 185, 129, .2); }
+    .hm-hsub { margin: .25rem 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 500; color: #4DA3FF; }
+.hm-hrole { flex-shrink: 0; padding: .125rem .5rem; border-radius: 9999px; font-size: 9px; font-weight: 700; text-transform: uppercase; background: #ECFDF5; color: #059669; border: 1px solid rgba(16, 185, 129, .2); }
     html.dark .hm-hrole { background: rgba(2, 44, 34, .4); color: #34D399; }
     .hm-hrole--teacher, html.dark .hm-hrole--teacher { background: rgba(77, 163, 255, .15); color: #4DA3FF; border-color: rgba(77, 163, 255, .3); }
     .hm-hmenu { padding: .25rem; font-size: .75rem; line-height: 1rem; }
@@ -218,7 +219,9 @@
     .hm-hitem:hover { background: #F1F5F9; }
     html.dark .hm-hitem:hover { background: #1C232D; }
     .hm-hitem svg { color: #4DA3FF; }
-    .hm-hitem--accent, html.dark .hm-hitem--accent { font-weight: 600; color: #4DA3FF; background: rgba(77, 163, 255, .1); }
+    .hm-hitem--emerald svg { color: #10B981; }
+.hm-hitem--muted svg { color: #94A3B8; }
+.hm-hitem--accent, html.dark .hm-hitem--accent { font-weight: 600; color: #4DA3FF; background: rgba(77, 163, 255, .1); }
     .hm-hitem--accent:hover, html.dark .hm-hitem--accent:hover { background: rgba(77, 163, 255, .2); }
     .hm-hitem--split { justify-content: space-between; }
     .hm-hitem--split > span:first-child { display: flex; align-items: center; gap: .5rem; }

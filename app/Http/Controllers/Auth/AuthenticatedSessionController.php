@@ -42,6 +42,11 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
+        // "Log in another account" in the account menu signs out straight to the sign-in page.
+        if ($request->boolean('switch_account')) {
+            return redirect()->route('login');
+        }
+
         return redirect('/');
     }
 }

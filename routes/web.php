@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\CertificateRequestController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\LearningController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PayWayCallbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileEmailChangeController;
+use App\Http\Controllers\ResourceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CourseController::class, 'home'])->name('home');
@@ -22,6 +24,23 @@ Route::get('/dashboard', function () {
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
+
+// Activity: what is new in the academy. Classmates' milestones show to signed-in students only.
+Route::get('/activity', [ActivityController::class, 'index'])->name('activity.index');
+Route::post('/activity/like', [ActivityController::class, 'like'])
+    ->middleware(['auth', 'throttle:60,1'])
+    ->name('activity.like');
+
+// Resources library: anyone can browse; downloading and bookmarking need an account.
+Route::get('/resources', [ResourceController::class, 'index'])->name('resources.index');
+Route::middleware('auth')->group(function () {
+    Route::get('/resources/{resource}/download', [ResourceController::class, 'download'])
+        ->middleware('throttle:30,1')
+        ->name('resources.download');
+    Route::post('/resources/{resource}/bookmark', [ResourceController::class, 'bookmark'])
+        ->middleware('throttle:60,1')
+        ->name('resources.bookmark');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

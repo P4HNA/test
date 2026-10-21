@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -174,6 +175,12 @@ class User extends Authenticatable implements MustVerifyEmail
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class)->latest('id');
+    }
+
+    /** Resources this student bookmarked in the Resources library. */
+    public function savedResources(): BelongsToMany
+    {
+        return $this->belongsToMany(DesignResource::class, 'design_resource_bookmarks')->withTimestamps();
     }
 
     public function enrollmentFor(Course $course): ?Enrollment

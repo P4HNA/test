@@ -1,26 +1,44 @@
-{{-- Top bar of the live design: wordmark, main tabs, notification bell and the account menu. --}}
+{{--
+    Top bar of the live design: wordmark, main tabs, notification bell and
+    the account menu. `$liveActive` underlines the current tab (home,
+    courses, resources, about). The bell lists the homepage promotion when
+    the page passes one.
+--}}
 @php
     $hmKm = app()->getLocale() === 'km';
     $L = fn (string $en, string $km) => $hmKm ? $km : $en;
     $icon = fn (string $name, string $class = 'i4') => \App\Support\LiveIcon::svg($name, $class);
     $hmUser = auth()->user();
     $liveActive = $liveActive ?? null;
+    $promotion = $promotion ?? null;
+
+    $liveTabs = [
+        ['home', route('home'), 'Home', 'ទំព័រដើម'],
+        ['courses', route('courses'), 'Courses', 'វគ្គសិក្សា'],
+        ['resources', route('resources.index'), 'Resources', 'ឯកសារ'],
+        ['about', route('about'), 'About', 'អំពីលោកគ្រូ'],
+    ];
+
+    // "My Certificate" opens the newest certificate, or the achievements tab when there is none yet.
+    $liveCertificate = $hmUser?->certificates()->latest('issued_at')->first();
+    $liveCertificateUrl = $liveCertificate
+        ? route('certificates.show', $liveCertificate)
+        : route('learning.profile').'#achievements';
 @endphp
 <header id="site-nav" class="hm-header">
     <div class="hm-hbar">
         <a href="{{ route('home') }}" class="hm-hlogo" aria-label="piseth.design home">piseth<span>.design</span></a>
 
         <nav class="hm-hnav" aria-label="{{ $L('Main', 'ម៉ឺនុយ') }}">
-            <a href="{{ route('home') }}" aria-current="page" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Home', 'ទំព័រដើម') }}</a>
-            <a href="{{ route('courses') }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Courses', 'វគ្គសិក្សា') }}</a>
-            <a href="{{ route('courses', ['free' => 1]) }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Resources', 'ឯកសារ') }}</a>
-            <a href="{{ route('about') }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('About', 'អំពីលោកគ្រូ') }}</a>
+            @foreach ($liveTabs as [$key, $href, $en, $km])
+                <a href="{{ $href }}" @if ($liveActive === $key) aria-current="page" @endif class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L($en, $km) }}</a>
+            @endforeach
         </nav>
 
         <div class="hm-hright" x-data="{ bell: false, acct: false }" @click.outside="bell = false; acct = false" @keydown.escape.window="bell = false; acct = false">
             <button type="button" class="hm-hbell" @click="bell = !bell; acct = false" :aria-expanded="bell.toString()" aria-expanded="false" aria-haspopup="true" aria-label="Notifications" title="Notification Center">
                 {!! $icon('bell') !!}
-                @if ($promotion ?? null)
+                @if ($promotion)
                     <span class="dot" aria-hidden="true"></span>
                 @endif
             </button>
@@ -32,7 +50,7 @@
                         <p class="hm-hmail">piseth.design</p>
                     </div>
                 </div>
-                @if ($promotion ?? null)
+                @if ($promotion)
                     <a href="{{ $promotion->ctaUrl() }}" class="hm-hnote">
                         <span class="pill">{{ $promotion->isDiscount() ? __(':percent% off', ['percent' => $promotion->discount_percent]) : __('News') }}</span>
                         <span class="t">{{ $promotion->localized('title') }}</span>
@@ -57,6 +75,9 @@
                             <span class="hm-hrole {{ $hmUser->isAdmin() ? 'hm-hrole--teacher' : '' }}">{{ $hmUser->isAdmin() ? 'Teacher' : 'Student' }}</span>
                         </div>
                         <p class="hm-hmail">{{ $hmUser->email }}</p>
+                        @if (filled($hmUser->headline))
+                            <p class="hm-hsub">{{ $hmUser->headline }}</p>
+                        @endif
                     </div>
                     <div class="hm-hmenu">
                         @if ($hmUser->isAdmin())
@@ -64,7 +85,7 @@
                         @endif
                         <a href="{{ route('learning.index') }}" class="hm-hitem">{!! $icon('book', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Dashboard', 'ផ្ទាំងសិក្សារបស់ខ្ញុំ') }}</span></a>
                         <a href="{{ route('learning.profile') }}" class="hm-hitem">{!! $icon('user', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Student Profile', 'គណនីនិស្សិត') }}</span></a>
-                        <a href="{{ route('profile.edit') }}" class="hm-hitem">{!! $icon('settings', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ __('Account settings') }}</span></a>
+                        <a href="{{ $liveCertificateUrl }}" class="hm-hitem hm-hitem--emerald">{!! $icon('grad', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Certificate', 'វិញ្ញាបនបត្ររបស់ខ្ញុំ') }}</span></a>
                         <div class="hm-hsep">
                             <form method="POST" action="{{ route('locale') }}">
                                 @csrf
@@ -82,6 +103,12 @@
                                 </span>
                                 <span class="hint hint--mono hm-mono">Toggle</span>
                             </button>
+                            <a href="{{ route('profile.edit') }}" class="hm-hitem hm-hitem--muted">{!! $icon('settings', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Account settings', 'ការកំណត់គណនី') }}</span></a>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <input type="hidden" name="switch_account" value="1">
+                                <button type="submit" class="hm-hitem hm-hitem--muted">{!! $icon('user', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Log in another account', 'ចូលគណនីផ្សេងទៀត') }}</span></button>
+                            </form>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" class="hm-hitem hm-hitem--danger">{!! $icon('logout', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Log Out', 'ចាកចេញពីគណនី') }}</span></button>

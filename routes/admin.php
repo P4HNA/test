@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\LessonController;
 use App\Http\Controllers\Admin\ModuleController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PromotionController;
+use App\Http\Controllers\Admin\ResourceController;
 use App\Http\Controllers\Admin\ThumbnailController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VideoController;
@@ -117,4 +118,13 @@ Route::middleware(['admin.network', 'auth', 'admin'])
         // Course pictures: a picture-first gallery to swap covers without opening the full editor
         Route::get('thumbnails', [ThumbnailController::class, 'index'])->name('thumbnails');
         Route::post('thumbnails/{course:uuid}', [ThumbnailController::class, 'update'])->name('thumbnails.update');
+
+        // Resources library: design files students can download
+        Route::get('resources', [ResourceController::class, 'index'])->name('resources');
+        Route::get('resources/create', [ResourceController::class, 'create'])->name('resources.create');
+        Route::post('resources', [ResourceController::class, 'store'])->name('resources.store');
+        Route::get('resources/{resource}/edit', [ResourceController::class, 'edit'])->name('resources.edit');
+        Route::put('resources/{resource}', [ResourceController::class, 'update'])->name('resources.update');
+        Route::patch('resources/{resource}/toggle', [ResourceController::class, 'toggle'])->name('resources.toggle');
+        Route::delete('resources/{resource}', [ResourceController::class, 'destroy'])->name('resources.destroy');
     });

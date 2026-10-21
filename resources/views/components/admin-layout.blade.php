@@ -11,6 +11,7 @@
             ['key' => 'thumbnails', 'label' => 'Course pictures', 'route' => 'admin.thumbnails', 'icon' => 'image'],
             ['key' => 'users', 'label' => 'Students', 'route' => 'admin.users', 'icon' => 'users'],
             ['key' => 'certificates', 'label' => 'Certificates', 'route' => 'admin.certificates', 'icon' => 'award'],
+            ['key' => 'resources', 'label' => 'Resources', 'route' => 'admin.resources', 'icon' => 'archive'],
         ],
         'Finance' => [
             ['key' => 'payments', 'label' => 'Payments', 'route' => 'admin.payments', 'icon' => 'card'],

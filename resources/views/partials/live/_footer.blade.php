@@ -31,6 +31,8 @@
                     <li><a href="{{ route('courses') }}">Video Classroom</a></li>
                     <li><a href="{{ route('learning.index') }}">Certificates</a></li>
                     <li><a href="{{ route('learning.profile') }}">My Profile</a></li>
+                    <li><a href="{{ route('activity.index') }}">Community Activity</a></li>
+                    <li><a href="{{ route('resources.index') }}">Free Khmer Fonts &amp; Templates</a></li>
                 </ul>
             </div>
 

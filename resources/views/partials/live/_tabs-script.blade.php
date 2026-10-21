@@ -12,6 +12,8 @@
         </div>
 
     Tabs with data-href navigate instead of filtering (server-side filters).
+    Every change also fires a bubbling `jelly:change` event ({ value }) for
+    pages that combine the tab with other filters (leave out data-target).
 --}}
 <script>
     (function () {
@@ -79,6 +81,7 @@
                 var href = t.getAttribute('data-href');
                 if (href) { setTimeout(function () { window.location.href = href; }, reduce ? 0 : 260); return; }
                 filter(t.getAttribute('data-value'));
+                root.dispatchEvent(new CustomEvent('jelly:change', { bubbles: true, detail: { value: t.getAttribute('data-value') } }));
                 if (root.scrollWidth > root.clientWidth) {
                     root.scrollTo({ left: t.offsetLeft - (root.clientWidth - t.offsetWidth) / 2, behavior: reduce ? 'auto' : 'smooth' });
                 }
