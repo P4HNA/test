@@ -51,6 +51,10 @@ Route::middleware('auth')->group(function () {
     // Separate from profile.update because that one owns the email-change
     // handshake and shouldn't be re-run just to save a bio.
     Route::patch('/profile/public', [ProfileController::class, 'updatePublicProfile'])->name('profile.public.update');
+    // "Change Photo" on /my-profile: the picture alone, leaving the other fields as they are.
+    Route::patch('/profile/photo', [ProfileController::class, 'updatePhoto'])
+        ->middleware('throttle:12,1')
+        ->name('profile.photo');
 
     Route::post('/profile/email/resend-code', [ProfileEmailChangeController::class, 'resend'])
         ->middleware('throttle:6,1')

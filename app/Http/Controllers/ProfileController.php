@@ -117,6 +117,32 @@ class ProfileController extends Controller
     }
 
     /**
+     * Swap the profile photo from the profile page, leaving the other public
+     * fields alone (updatePublicProfile() would clear any it isn't sent).
+     */
+    public function updatePhoto(Request $request): RedirectResponse
+    {
+        // Same limits as the photo on the profile form, but here it is the whole point.
+        $form = new PublicProfileUpdateRequest;
+        $request->validate(
+            ['avatar' => ['required', ...array_diff($form->rules()['avatar'], ['nullable'])]],
+            $form->messages(),
+        );
+
+        $user = $request->user();
+        $previous = $user->avatar_path;
+
+        $user->avatar_path = $this->storeAvatar($request->file('avatar'));
+        $user->save();
+
+        if ($previous && $previous !== $user->avatar_path) {
+            Storage::disk('public')->delete($previous);
+        }
+
+        return Redirect::to(route('learning.profile'))->with('status', 'photo-updated');
+    }
+
+    /**
      * Square off and shrink the photo before it is stored.
      *
      * Straight off a phone an avatar is several megabytes, and the nav shows it

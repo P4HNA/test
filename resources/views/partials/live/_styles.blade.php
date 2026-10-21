@@ -220,13 +220,13 @@
     html.dark .hm-hitem:hover { background: #1C232D; }
     .hm-hitem svg { color: #4DA3FF; }
     .hm-hitem--emerald svg { color: #10B981; }
-.hm-hitem--muted svg { color: #94A3B8; }
-.hm-hitem--accent, html.dark .hm-hitem--accent { font-weight: 600; color: #4DA3FF; background: rgba(77, 163, 255, .1); }
-    .hm-hitem--accent:hover, html.dark .hm-hitem--accent:hover { background: rgba(77, 163, 255, .2); }
+    .hm-hitem--muted svg { color: #94A3B8; }
+    .hm-hitem--strong { font-weight: 600; }
     .hm-hitem--split { justify-content: space-between; }
     .hm-hitem--split > span:first-child { display: flex; align-items: center; gap: .5rem; }
     .hm-hitem .hint { font-size: 10px; font-weight: 600; color: #4DA3FF; }
     .hm-hitem .hint--mono { font-weight: 400; color: #94A3B8; }
+    .hm-hitem .hint--chip { flex-shrink: 0; padding: .125rem .375rem; border-radius: .25rem; background: rgba(77, 163, 255, .15); font-weight: 700; }
     .hm-hitem--danger, html.dark .hm-hitem--danger { font-weight: 600; color: #E11D48; }
     html.dark .hm-hitem--danger { color: #FB7185; }
     .hm-hitem--danger svg { color: #F43F5E; }

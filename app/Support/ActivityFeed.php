@@ -33,16 +33,28 @@ class ActivityFeed
     /** How far back each kind of post is looked for. */
     private const PER_KIND = 20;
 
+    /** Set by ownedBy(): only this student's own posts, with no teacher posts. */
+    private ?User $owner = null;
+
     public function __construct(private readonly ?User $viewer)
     {
+    }
+
+    /** The feed for one student's profile: what they enrolled in, finished and earned. */
+    public static function ownedBy(User $user): self
+    {
+        $feed = new self($user);
+        $feed->owner = $user;
+
+        return $feed;
     }
 
     /** @return Collection<int, array<string, mixed>> newest first */
     public function posts(int $limit = 30): Collection
     {
-        $teacher = User::query()->where('role', 'admin')->oldest('id')->first();
+        $teacher = $this->owner ? null : User::query()->where('role', 'admin')->oldest('id')->first();
 
-        $posts = collect()
+        $posts = $this->owner ? collect() : collect()
             ->merge($this->newLessons($teacher))
             ->merge($this->newCourses($teacher))
             ->merge($this->news());
@@ -149,6 +161,7 @@ class ActivityFeed
     {
         return Certificate::query()->with(['user', 'course'])
             ->whereHas('user')->whereHas('course')
+            ->when($this->owner, fn ($q, User $owner) => $q->where('user_id', $owner->getKey()))
             ->latest('issued_at')->latest('id')->limit(self::PER_KIND)->get()
             ->map(fn (Certificate $cert) => $this->post('cert:'.$cert->id, 'cert', $cert->issued_at ?? $cert->created_at, [
                 'actor' => $this->studentActor($cert->user, $cert->course),
@@ -168,6 +181,7 @@ class ActivityFeed
             ->with(['user', 'lesson.module.course'])
             ->whereHas('user')
             ->whereHas('lesson.module.course', fn ($q) => $q->published())
+            ->when($this->owner, fn ($q, User $owner) => $q->where('user_id', $owner->getKey()))
             ->latest('completed_at')->latest('id')
             ->limit(self::PER_KIND * 10)
             ->get();
@@ -198,6 +212,7 @@ class ActivityFeed
     {
         return Enrollment::query()->with(['user', 'course'])
             ->whereHas('user')->whereHas('course', fn ($q) => $q->published())
+            ->when($this->owner, fn ($q, User $owner) => $q->where('user_id', $owner->getKey()))
             ->latest('enrolled_at')->latest('id')->limit(self::PER_KIND)->get()
             ->map(fn (Enrollment $e) => $this->post('join:'.$e->id, 'join', $e->enrolled_at ?? $e->created_at, [
                 'actor' => $this->studentActor($e->user, $e->course),

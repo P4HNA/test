@@ -78,13 +78,13 @@ class DesignResource extends Model
 
     public function scopePublished(Builder $query): Builder
     {
-        return $query->where('is_published', true);
+        return $query->where($query->qualifyColumn('is_published'), true);
     }
 
     /** Library order: the teacher's order first, newest first within it. */
     public function scopeLibraryOrder(Builder $query): Builder
     {
-        return $query->orderBy('sort_order')->orderByDesc('id');
+        return $query->orderBy($query->qualifyColumn('sort_order'))->orderByDesc($query->qualifyColumn('id'));
     }
 
     public function isDownloadable(): bool

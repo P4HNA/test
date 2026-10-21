@@ -80,9 +80,6 @@
                         @endif
                     </div>
                     <div class="hm-hmenu">
-                        @if ($hmUser->isAdmin())
-                            <a href="{{ route('admin.dashboard') }}" class="hm-hitem hm-hitem--accent">{!! $icon('shield', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Teacher Admin Portal', 'ផ្ទាំងគ្រប់គ្រងគ្រូបង្រៀន') }}</span></a>
-                        @endif
                         <a href="{{ route('learning.index') }}" class="hm-hitem">{!! $icon('book', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Dashboard', 'ផ្ទាំងសិក្សារបស់ខ្ញុំ') }}</span></a>
                         <a href="{{ route('learning.profile') }}" class="hm-hitem">{!! $icon('user', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Student Profile', 'គណនីនិស្សិត') }}</span></a>
                         <a href="{{ $liveCertificateUrl }}" class="hm-hitem hm-hitem--emerald">{!! $icon('grad', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Certificate', 'វិញ្ញាបនបត្ររបស់ខ្ញុំ') }}</span></a>
@@ -103,7 +100,13 @@
                                 </span>
                                 <span class="hint hint--mono hm-mono">Toggle</span>
                             </button>
-                            <a href="{{ route('profile.edit') }}" class="hm-hitem hm-hitem--muted">{!! $icon('settings', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Account settings', 'ការកំណត់គណនី') }}</span></a>
+                            {{-- Only a teacher has a teacher side to switch to. --}}
+                            @if ($hmUser->isAdmin())
+                                <a href="{{ route('admin.dashboard') }}" class="hm-hitem hm-hitem--split hm-hitem--strong">
+                                    <span>{!! $icon('shield', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Switch to Teacher Account', 'ប្តូរទៅកាន់គណនីគ្រូ') }}</span></span>
+                                    <span class="hint hint--chip hm-mono">Teacher</span>
+                                </a>
+                            @endif
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <input type="hidden" name="switch_account" value="1">
