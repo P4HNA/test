@@ -20,7 +20,7 @@ class CourseLibraryPageTest extends TestCase
 
         $this->get(route('courses'))
             ->assertOk()
-            ->assertSee('Start your learning journey here')
+            ->assertSeeText('Start your learning journey here')
             ->assertSee('Brand Identity Basics')
             ->assertSee('Deepen your skills with a learning path')
             ->assertSee('Logo Grids')

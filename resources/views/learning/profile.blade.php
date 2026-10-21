@@ -65,6 +65,19 @@
             @media (min-width: 640px) { .pf-id { flex-direction: row; align-items: center; gap: 1.5rem; } }
 
             .pf-photo { position: relative; flex-shrink: 0; }
+            @property --pf-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+            .pf-photo::before { content: ''; position: absolute; inset: -5px; border-radius: 1.75rem; background: conic-gradient(from var(--pf-a), #4DA3FF, #A855F7, #22D3EE, #34D399, #4DA3FF); animation: pf-spin 5s linear infinite; opacity: .9; }
+            .pf-photo::after { content: ''; position: absolute; inset: -14px; z-index: -1; border-radius: 2.25rem; background: conic-gradient(from var(--pf-a), #4DA3FF, #A855F7, #22D3EE, #4DA3FF); filter: blur(18px); opacity: .35; animation: pf-spin 5s linear infinite; }
+            @keyframes pf-spin { to { --pf-a: 360deg; } }
+            .pf-pic { z-index: 1; }
+            .pf-id { isolation: isolate; }
+            .pf-badge.is-earned { position: relative; overflow: hidden; }
+            .pf-badge.is-earned::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); animation: hm-shimmer 3.2s ease-in-out 1s infinite; pointer-events: none; }
+            html.dark .pf-badge.is-earned::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .12), transparent); }
+            .pf-badge.is-earned > i { box-shadow: 0 0 0 3px rgba(77, 163, 255, .15), 0 6px 16px -6px rgba(24, 119, 242, .6); }
+            .pf-stat { transition: transform .3s cubic-bezier(.22, 1, .36, 1), border-color .3s ease; }
+            .pf-stat:hover { transform: translateY(-2px); border-color: rgba(77, 163, 255, .4); }
+            .pf-seal.fx-shine::after { z-index: 2; animation-duration: 3.6s; }
             .pf-pic { position: relative; display: block; width: 6rem; height: 6rem; padding: 0; border: 0; border-radius: 1.5rem; overflow: hidden; background: #0F172A; cursor: pointer; box-shadow: 0 0 0 4px rgba(77, 163, 255, .3), 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1); transition: all .3s ease; }
             @media (min-width: 640px) { .pf-pic { width: 7rem; height: 7rem; } }
             .pf-photo:hover .pf-pic { box-shadow: 0 0 0 4px rgba(77, 163, 255, .6), 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1); transform: scale(1.02); }
@@ -298,7 +311,7 @@
             html:lang(km) .hm-body :is(.pf-nameline h1, .pf-cap h3, .pf-certb h3, .pf-seal h4) { line-height: 1.6; }
             html:lang(km) .hm-body :is(.pf-tab, .pf-tool, .pf-btn, .pf-out, .pf-go, .pf-gray) { line-height: 1.4; }
             @media (prefers-reduced-motion: reduce) {
-                .pf-over svg, .pf-dot i { animation: none; }
+                .pf-over svg, .pf-dot i, .pf-photo::before, .pf-photo::after, .pf-badge.is-earned::after { animation: none; }
                 .pf-cc, .pf-cc:hover { transform: none; }
             }
         </style>
@@ -352,8 +365,8 @@
                             <p class="pf-bio">{{ $user->bio }}</p>
                         @endif
                         <div class="pf-tools">
-                            <button type="button" class="pf-tool" data-photo-pick>{!! $icon('upload', 'i35') !!}<span class="{{ $km }}">{{ $L('Change Photo', 'ផ្លាស់ប្តូររូបថត') }}</span></button>
-                            <a href="{{ route('profile.edit') }}" class="pf-tool pf-tool--ghost">{!! $icon('pencil', 'i35') !!}<span class="{{ $km }}">{{ $L('Edit Profile', 'កែប្រែព័ត៌មាន') }}</span></a>
+                            <button type="button" class="pf-tool fx-btn" data-photo-pick>{!! $icon('upload', 'i35') !!}<span class="{{ $km }}">{{ $L('Change Photo', 'ផ្លាស់ប្តូររូបថត') }}</span></button>
+                            <a href="{{ route('profile.edit') }}" class="pf-tool fx-btn pf-tool--ghost">{!! $icon('pencil', 'i35') !!}<span class="{{ $km }}">{{ $L('Edit Profile', 'កែប្រែព័ត៌មាន') }}</span></a>
                         </div>
                         @if ($photoError)
                             <p class="pf-err" role="alert">{{ $photoError }}</p>
@@ -363,12 +376,12 @@
                 </div>
 
                 <div class="pf-acts">
-                    <a href="{{ $latestCertificate ? route('certificates.show', $latestCertificate) : '#achievements' }}" class="pf-btn" @unless ($latestCertificate) data-tab-link="certificates" @endunless>
+                    <a href="{{ $latestCertificate ? route('certificates.show', $latestCertificate) : '#achievements' }}" class="pf-btn fx-btn" @unless ($latestCertificate) data-tab-link="certificates" @endunless>
                         {!! $icon('award') !!}<span>View Verified Certificate</span>
                     </a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="pf-out" title="{{ $L('Log Out of Student Account', 'ចាកចេញពីគណនី') }}">
+                        <button type="submit" class="pf-out fx-btn" title="{{ $L('Log Out of Student Account', 'ចាកចេញពីគណនី') }}">
                             {!! $icon('logout') !!}<span class="{{ $km }}">{{ $L('Log Out', 'ចាកចេញ') }}</span>
                         </button>
                     </form>
@@ -376,22 +389,22 @@
             </div>
 
             <div class="pf-stats">
-                <div class="pf-stat">
+                <div class="pf-stat fx-spot">
                     <span class="k pf-mono">Courses</span>
                     <span class="v" data-fx-count>{{ $user->enrollments->count() }}</span>
                     <span class="s">Enrolled active</span>
                 </div>
-                <div class="pf-stat">
+                <div class="pf-stat fx-spot">
                     <span class="k pf-mono">Completed Lessons</span>
                     <span class="v" data-fx-count>{{ $lessonsDone }}</span>
                     <span class="s green">{{ $overallProgress }}% Progress</span>
                 </div>
-                <div class="pf-stat">
+                <div class="pf-stat fx-spot">
                     <span class="k pf-mono">Assignments</span>
                     <span class="v" data-fx-count>{{ $latestWork->count() }}</span>
                     <span class="s amber">{{ $latestWork->filter(fn ($w) => $w->isReviewed())->count() }} Reviewed</span>
                 </div>
-                <div class="pf-stat">
+                <div class="pf-stat fx-spot">
                     <span class="k pf-mono">Certificates</span>
                     <span class="v blue" data-fx-count>{{ $certificates->count() }}</span>
                     <span class="s">Issued by {{ $teacherName }}</span>
@@ -417,7 +430,7 @@
                 @if ($user->enrollments->isEmpty())
                     <div class="pf-empty">
                         <p class="{{ $km }}">{{ $L('No courses yet. Pick your first course and it will show up here with your progress.', 'មិនទាន់មានវគ្គសិក្សាទេ។ ជ្រើសរើសវគ្គដំបូងរបស់អ្នក ហើយវឌ្ឍនភាពនឹងបង្ហាញនៅទីនេះ។') }}</p>
-                        <a href="{{ route('courses') }}" class="pf-btn">{!! $icon('book') !!}<span class="{{ $km }}">{{ $L('Browse courses', 'មើលវគ្គសិក្សា') }}</span></a>
+                        <a href="{{ route('courses') }}" class="pf-btn fx-btn">{!! $icon('book') !!}<span class="{{ $km }}">{{ $L('Browse courses', 'មើលវគ្គសិក្សា') }}</span></a>
                     </div>
                 @else
                     <div class="pf-grid2">
@@ -430,7 +443,7 @@
                                 $continueUrl = ($next && filled($next->getRouteKey())) ? route('courses.lessons.show', [$course, $next]) : route('courses.show', $course);
                                 $titleKm = $course->title_km ?: $course->title_en;
                             @endphp
-                            <article class="pf-cc">
+                            <article class="pf-cc fx-spot" data-fx>
                                 <a href="{{ $continueUrl }}" class="pf-shot" aria-label="{{ $course->localized('title') }}">
                                     <img src="{{ \App\Support\CoursePicture::for($course, 800) }}" alt="" loading="lazy" decoding="async">
                                     <span class="pf-chips">
@@ -445,7 +458,7 @@
                                 <div class="pf-ccb">
                                     <div>
                                         <div class="pf-prog"><span class="{{ $km }}">{{ $L('Course Progress', 'វឌ្ឍនភាពសិក្សា') }}</span><b class="pf-mono">{{ $percent }}%</b></div>
-                                        <div class="pf-bar" role="progressbar" aria-valuenow="{{ $percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ $L('Course Progress', 'វឌ្ឍនភាពសិក្សា') }}"><i style="width: {{ $percent }}%"></i></div>
+                                        <div class="pf-bar" role="progressbar" aria-valuenow="{{ $percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ $L('Course Progress', 'វឌ្ឍនភាពសិក្សា') }}"><i class="fx-shine" data-fx-bar style="width: {{ $percent }}%"></i></div>
                                     </div>
                                     <div class="pf-ccf">
                                         <span class="pf-by">
@@ -456,7 +469,7 @@
                                             @endif
                                             <span>{{ $course->instructor_name ?: $teacherName }}</span>
                                         </span>
-                                        <a href="{{ $continueUrl }}" class="pf-go"><span class="{{ $km }}">{{ $percent >= 100 ? $L('Review', 'មើលឡើងវិញ') : $L('Continue', 'បន្តការរៀន') }}</span>{!! $icon('chevron-right', 'i35') !!}</a>
+                                        <a href="{{ $continueUrl }}" class="pf-go fx-btn"><span class="{{ $km }}">{{ $percent >= 100 ? $L('Review', 'មើលឡើងវិញ') : $L('Continue', 'បន្តការរៀន') }}</span>{!! $icon('chevron-right', 'i35') !!}</a>
                                     </div>
                                 </div>
                             </article>
@@ -467,7 +480,7 @@
 
             {{-- ---------- Activity ---------- --}}
             <div class="pf-panel" id="pf-panel-activity" role="tabpanel" aria-labelledby="pf-tab-activity" tabindex="0">
-                <section class="pf-box">
+                <section class="pf-box" data-fx>
                     <div class="pf-boxhead">
                         <h2 class="{{ $km }}">{{ $L('Learning streak', 'ការសិក្សាប្រចាំថ្ងៃ') }}</h2>
                         <p>{{ __(':count lessons finished in the last :weeks weeks', ['count' => $lessonsInGrid, 'weeks' => \App\Support\LearningStats::WEEKS]) }}</p>
@@ -556,8 +569,8 @@
                 <span id="achievements"></span>
                 @forelse ($certificates as $certificate)
                     @php $cc = $certificate->course; @endphp
-                    <article class="pf-cert">
-                        <a href="{{ route('certificates.show', $certificate) }}" class="pf-seal">
+                    <article class="pf-cert fx-spot" data-fx>
+                        <a href="{{ route('certificates.show', $certificate) }}" class="pf-seal fx-shine">
                             <img src="https://images.unsplash.com/photo-1589330694653-dad6d3240a2b?w=800&auto=format&fit=crop&q=80" alt="" loading="lazy" decoding="async">
                             <div class="row"><span class="tag pf-mono">Verified Credential</span>{!! $icon('award', 'i5') !!}</div>
                             <div>
@@ -574,8 +587,8 @@
                                 <p class="m pf-mono">Issued to {{ $certificate->holder_name ?: $user->name }} · Completed {{ $certificate->issued_at?->locale('en')->isoFormat('MMM D, YYYY') }}</p>
                             </div>
                             <div class="pf-row">
-                                <button type="button" class="pf-gray" data-copy="{{ $certificate->code }}">{!! $icon('copy') !!}<span data-copy-label>{{ $L('Copy Code', 'ចម្លងលេខកូដ') }}</span></button>
-                                <a href="{{ route('certificates.show', $certificate) }}" class="pf-btn">{!! $icon('award') !!}<span>{{ $L('View Official Certificate Page', 'មើលទំព័រវិញ្ញាបនបត្រ') }}</span></a>
+                                <button type="button" class="pf-gray fx-btn" data-copy="{{ $certificate->code }}">{!! $icon('copy') !!}<span data-copy-label>{{ $L('Copy Code', 'ចម្លងលេខកូដ') }}</span></button>
+                                <a href="{{ route('certificates.show', $certificate) }}" class="pf-btn fx-btn">{!! $icon('award') !!}<span>{{ $L('View Official Certificate Page', 'មើលទំព័រវិញ្ញាបនបត្រ') }}</span></a>
                             </div>
                         </div>
                     </article>
@@ -586,14 +599,14 @@
                     </div>
                 @endforelse
 
-                <section class="pf-box">
+                <section class="pf-box" data-fx>
                     <div class="pf-boxhead">
                         <h2 class="{{ $km }}">{{ $L('Milestones', 'សមិទ្ធផល') }}</h2>
                         <p>{{ $L(count(array_filter($badges, fn ($b) => $b['earned'])).' earned', 'ទទួលបាន '.count(array_filter($badges, fn ($b) => $b['earned']))) }}</p>
                     </div>
                     <div class="pf-badges">
                         @foreach ($badges as $badge)
-                            <div class="pf-badge {{ $badge['earned'] ? '' : 'is-locked' }}">
+                            <div class="pf-badge {{ $badge['earned'] ? 'is-earned' : 'is-locked' }}" data-fx>
                                 <i>{!! $icon($badgeIcons[$badge['icon']] ?? 'award', 'i4') !!}</i>
                                 <div style="min-width:0">
                                     <p>{{ __($badge['label']) }}</p>
@@ -611,12 +624,12 @@
                     <div class="pf-empty">
                         {!! $icon('bookmark', 'i5') !!}
                         <p class="{{ $km }}">{{ $L('Nothing saved yet. Bookmark fonts, templates and kits in the Resources library to keep them here.', 'មិនទាន់មានអ្វីរក្សាទុកទេ។ ចុចសម្គាល់ Font, Template និងឯកសារនៅក្នុងបណ្ណាល័យឯកសារ ដើម្បីរក្សាទុកនៅទីនេះ។') }}</p>
-                        <a href="{{ route('resources.index') }}" class="pf-btn">{!! $icon('folder') !!}<span class="{{ $km }}">{{ $L('Open Resources', 'បើកបណ្ណាល័យឯកសារ') }}</span></a>
+                        <a href="{{ route('resources.index') }}" class="pf-btn fx-btn">{!! $icon('folder') !!}<span class="{{ $km }}">{{ $L('Open Resources', 'បើកបណ្ណាល័យឯកសារ') }}</span></a>
                     </div>
                 @else
                     <div class="pf-grid2">
                         @foreach ($saved as $resource)
-                            <article class="pf-sv">
+                            <article class="pf-sv fx-spot" data-fx>
                                 <a href="{{ route('resources.download', $resource) }}" class="pf-shot" @if ($resource->isLink()) target="_blank" rel="noopener" @endif>
                                     <img src="{{ $resource->pictureSrc() }}" alt="" loading="lazy" decoding="async">
                                     <span class="pf-chips">

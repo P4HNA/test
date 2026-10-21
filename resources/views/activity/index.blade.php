@@ -12,7 +12,9 @@
             .ac-page { max-width: 56rem; margin: 0 auto; padding: 2rem 1rem 6rem; display: flex; flex-direction: column; gap: 1.5rem; }
             @media (min-width: 640px) { .ac-page { padding-left: 1.5rem; padding-right: 1.5rem; } }
             @media (min-width: 1024px) { .ac-page { padding-left: 2rem; padding-right: 2rem; } }
-            .ac-head { padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+            .ac-head { position: relative; isolation: isolate; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+            .ac-head .fx-aurora { inset: -2rem 0 0; border-radius: 1.5rem; }
+            .ac-head h1 { margin-top: .75rem !important; }
             .ac-head h1 { margin: 0; font-size: 1.5rem; line-height: 2rem; font-weight: 900; color: var(--ink); }
             @media (min-width: 640px) { .ac-head h1 { font-size: 1.875rem; line-height: 2.25rem; } }
             .ac-head p { margin: .25rem 0 0; font-size: .75rem; line-height: 1rem; color: var(--mut); }
@@ -30,7 +32,9 @@
 
     <div class="ac-page">
         <div class="ac-head">
-            <h1 class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Community Learning Activity', 'សកម្មភាពសិក្សាក្នុងសហគមន៍') }}</h1>
+            <div class="fx-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+            <span class="fx-live {{ $hmKm ? 'hm-km' : '' }}"><i></i>{{ $L('Live from the classroom', 'ផ្ទាល់ពីថ្នាក់រៀន') }}</span>
+            <h1 class="{{ $hmKm ? 'hm-km' : '' }}">@if ($hmKm)សកម្មភាពសិក្សា<span class="fx-grad">ក្នុងសហគមន៍</span>@else Community Learning <span class="fx-grad">Activity</span>@endif</h1>
             <p class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('New lessons from Teacher Piseth Yoeurn, academy news, and your classmates’ milestones.', 'មេរៀនថ្មីពីលោកគ្រូ យឿន ពិសិដ្ឋ ព័ត៌មានពីសាលា និងវឌ្ឍនភាពសិក្សារបស់មិត្តរួមថ្នាក់។') }}</p>
         </div>
 

@@ -106,7 +106,7 @@
             html.dark .ad-file-foot { border-color: #222936; }
             .ad-file-foot a, .ad-file-foot button { display: inline-flex; align-items: center; gap: .375rem; padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: #1877F2; text-decoration: none; cursor: pointer; }
             html.dark .ad-file-foot a, html.dark .ad-file-foot button { color: #4DA3FF; }
-            .ad-file-foot span { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #94A3B8; }
+            .ad-file-foot > span { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #94A3B8; }
             .ad-note { margin: .75rem 0 0; padding: .625rem .75rem; border-radius: .75rem; background: #F8FAFC; font-size: .75rem; line-height: 1.55; color: #475569; }
             html.dark .ad-note { background: #0B0F17; color: #CBD5E1; }
             .ad-none { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: 1.5rem 1rem; border-radius: 1rem; border: 1.5px dashed #CBD5E1; text-align: center; font-size: .8125rem; color: #64748B; }

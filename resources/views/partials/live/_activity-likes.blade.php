@@ -21,6 +21,7 @@
                 var before = parseInt(btn.querySelector('[data-count]').textContent, 10) || 0;
                 paint(btn, !was, Math.max(0, before + (was ? -1 : 1)));   // show it straight away
                 btn.classList.remove('is-pop'); void btn.offsetWidth; btn.classList.add('is-pop');
+                if (!was && window.fxBurst) fxBurst(btn.querySelector('svg'), '#1877F2');
                 btn.disabled = true;
                 fetch(url, {
                     method: 'POST',

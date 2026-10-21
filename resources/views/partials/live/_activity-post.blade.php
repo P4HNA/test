@@ -16,7 +16,7 @@
     ][$post['type']] ?? ['award', '#1877F2'];
     $actor = $post['actor'];
 @endphp
-<article class="ac-post" data-key="{{ $post['key'] }}">
+<article class="ac-post fx-spot" data-fx data-key="{{ $post['key'] }}">
     <div class="ac-top">
         <div class="ac-who">
             <div class="ac-av">
@@ -54,7 +54,7 @@
             @endif
         </div>
         @if ($post['url'])
-            <a href="{{ $post['url'] }}" class="ac-view"><span class="{{ $acKm ? 'hm-km' : '' }}">{{ $acL('View', 'ចូលមើល') }}</span>{!! $acIcon('arrow-up-right', 'i3') !!}</a>
+            <a href="{{ $post['url'] }}" class="ac-view fx-btn"><span class="{{ $acKm ? 'hm-km' : '' }}">{{ $acL('View', 'ចូលមើល') }}</span>{!! $acIcon('arrow-up-right', 'i3') !!}</a>
         @endif
     </div>
 

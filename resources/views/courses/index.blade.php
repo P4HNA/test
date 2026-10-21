@@ -83,6 +83,11 @@
             @media (min-width: 640px) { .cl-hero { padding: 3rem 1.5rem; } }
             @media (min-width: 1024px) { .cl-hero { padding-left: 2rem; padding-right: 2rem; } }
             .cl-hero .cl-wrap > * + * { margin-top: 1.5rem; }
+            .cl-hero { isolation: isolate; overflow: hidden; }
+            .cl-hero .cl-wrap { position: relative; z-index: 2; }
+            .cl-float-layer { position: absolute; inset: 0 0 auto; height: 22rem; z-index: 1; pointer-events: none; display: none; }
+            @media (min-width: 900px) { .cl-float-layer { display: block; } }
+            .cl-float-layer .fx-tile { opacity: .92; }
             .cl-toprow { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
             .cl-pill { display: inline-flex; align-items: center; gap: .5rem; padding: .375rem .875rem; border-radius: 9999px; background: rgba(255, 255, 255, .95); border: 1px solid rgba(226, 232, 240, .9); color: #1E293B; font: inherit; font-size: .75rem; line-height: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 1px 1px rgba(0, 0, 0, .04); backdrop-filter: blur(12px); transition: all .15s ease; }
             .cl-pill svg { color: #475569; }
@@ -367,13 +372,8 @@
             .cl-glass small svg { width: .75rem; height: .75rem; color: #6EE7B7; }
 
             /* latest lessons */
-            .cl-chips { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem; padding-top: 1.5rem; }
+            .cl-tab { display: inline-flex; align-items: center; gap: .375rem; }
             @media (min-width: 640px) { .cl-chips { gap: .75rem; } }
-            .cl-chip { display: inline-flex; align-items: center; gap: .375rem; padding: .375rem .875rem; border-radius: 9999px; border: 1px solid #E2E8F0; background: #fff; color: #334155; font: inherit; font-size: .75rem; line-height: 1rem; font-weight: 600; cursor: pointer; transition: all .15s ease; }
-            html.dark .cl-chip { background: #1A2234; border-color: #334155; color: #CBD5E1; }
-            .cl-chip:hover { border-color: #94A3B8; }
-            .cl-chip[aria-pressed="true"] { background: #0F172A; border-color: #0F172A; color: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
-            html.dark .cl-chip[aria-pressed="true"] { background: #fff; border-color: #fff; color: #0F172A; }
             .cl-lessons { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding-top: 2.5rem; }
             @media (min-width: 640px) { .cl-lessons { gap: 1.75rem; } }
             @media (min-width: 768px) { .cl-lessons { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -406,7 +406,7 @@
             html:lang(km) .hm-body :is(.cl-hero h1, .cl-sechead h2, .cl-feat h3) { line-height: 1.6; }
             html:lang(km) .hm-body :is(.cl-body h3, .cl-path h3) { line-height: 1.7; }
             html:lang(km) .hm-body :is(.cl-mainhead h2) { letter-spacing: 0; text-transform: none; }
-            html:lang(km) .hm-body :is(.cl-pill, .cl-chip, .cl-go, .cl-play, .cl-btn-dark, .cl-btn-line) { line-height: 1.4; }
+            html:lang(km) .hm-body :is(.cl-pill, .cl-go, .cl-play, .cl-btn-dark, .cl-btn-line) { line-height: 1.4; }
             @media (prefers-reduced-motion: reduce) {
                 .cl-dot { animation: none; }
                 .cl-card:hover, .cl-path:hover { transform: none; }
@@ -417,10 +417,21 @@
 
     <div id="cl-page" data-cl-page>
         {{-- ================= Hero: search, filters, main courses ================= --}}
-        <section class="cl-hero">
+        <section class="cl-hero" data-fx-parallax>
+            <div class="cl-float-layer" aria-hidden="true">
+                <span class="fx-float a" style="top: 22%; left: 6%; --depth: 18px"><span class="fx-tile" data-app="PS"><span>Ps</span></span></span>
+                <span class="fx-float b" style="top: 52%; left: 11%; --depth: 10px"><span class="fx-tile" data-app="SUN" style="width:2.5rem; height:2.5rem">✦</span></span>
+                <span class="fx-float c" style="top: 18%; right: 7%; --depth: 22px"><span class="fx-tile" data-app="AI"><span>Ai</span></span></span>
+                <span class="fx-float a" style="top: 50%; right: 12%; --depth: 12px"><span class="fx-tile" data-app="FG"><svg viewBox="0 0 38 57" width="18" height="26"><path fill="#1ABCFE" d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z" /><path fill="#0ACF83" d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z" /><path fill="#FF7262" d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z" /><path fill="#F24E1E" d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z" /><path fill="#A259FF" d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z" /></svg></span></span>
+                <span class="fx-float b" style="top: 8%; left: 30%; --depth: 8px"><span class="fx-tile" data-app="AE" style="width:2.25rem; height:2.25rem; font-size:.75rem"><span>Ae</span></span></span>
+                <span class="fx-star" style="top: 14%; left: 18%"></span>
+                <span class="fx-star" style="top: 34%; right: 22%; animation-delay: .9s"></span>
+                <span class="fx-star" style="top: 62%; left: 24%; animation-delay: 1.6s"></span>
+                <span class="fx-star" style="top: 10%; right: 32%; animation-delay: 2.2s"></span>
+            </div>
             <div class="cl-wrap">
                 <div class="cl-toprow">
-                    <button type="button" class="cl-pill" data-cl-all aria-pressed="false">
+                    <button type="button" class="cl-pill fx-btn" data-cl-all aria-pressed="false">
                         {!! $icon('list', 'i35') !!}<span class="{{ $km }}" data-cl-all-label>{{ $L('Browse all courses', 'ស្វែងយល់ពីវគ្គសិក្សាទាំងអស់') }}</span>
                     </button>
                     <button type="button" class="cl-link" data-cl-all>
@@ -428,7 +439,7 @@
                     </button>
                 </div>
 
-                <h1 class="{{ $km }}">{{ $L('Start your learning journey here', 'ចាប់ផ្តើមដំណើរការសិក្សារបស់អ្នកនៅទីនេះ') }}</h1>
+                <h1 class="{{ $km }}">@if ($hmKm)ចាប់ផ្តើម<span class="fx-grad">ដំណើរការសិក្សា</span>របស់អ្នកនៅទីនេះ@else Start your learning <span class="fx-grad">journey</span> here @endif</h1>
 
                 <form method="GET" action="{{ route('courses') }}" class="cl-search"
                     x-data="{
@@ -496,7 +507,7 @@
                         </div>
                         <div class="cl-fbtns">
                             <a href="{{ route('courses') }}" class="cl-btn-line">{{ __('Clear') }}</a>
-                            <button type="submit" class="cl-btn-dark">{{ __('Apply filters') }}</button>
+                            <button type="submit" class="cl-btn-dark fx-btn">{{ __('Apply filters') }}</button>
                         </div>
                     </div>
                 </form>
@@ -567,7 +578,7 @@
                                     $discounted = $course->activeDiscount()?->isDiscount() && $course->isOnSale();
                                     $group = $groupLabel[$card['group']] ?? [$card['group'], $card['group']];
                                 @endphp
-                                <article class="cl-card{{ $discounted ? ' is-promo' : '' }}" data-category="{{ $course->category }}" @if ($activeCategory !== 'All' && $activeCategory !== $course->category) hidden @endif>
+                                <article class="cl-card fx-spot{{ $discounted ? ' is-promo' : '' }}" data-fx data-category="{{ $course->category }}" @if ($activeCategory !== 'All' && $activeCategory !== $course->category) hidden @endif>
                                     <div class="cl-cover">
                                         <img src="{{ $card['photo'] }}" alt="" loading="lazy" decoding="async">
                                         {{-- Blue ribbon, only on a course a live discount applies to. --}}
@@ -612,9 +623,9 @@
                                                 @endif
                                             </div>
                                             @if ($card['enrolled'])
-                                                <a href="{{ $card['continue'] }}" class="cl-go is-on"><span class="{{ $km }}">{{ $L('Continue', 'បន្តការរៀន') }}</span>{!! $icon('arrow-up-right', 'i35') !!}</a>
+                                                <a href="{{ $card['continue'] }}" class="cl-go is-on fx-btn"><span class="{{ $km }}">{{ $L('Continue', 'បន្តការរៀន') }}</span>{!! $icon('arrow-up-right', 'i35') !!}</a>
                                             @else
-                                                <a href="{{ $card['url'] }}" class="cl-go"><span class="{{ $km }}">{{ $L('Explore', 'ស្វែងយល់') }}</span>{!! $icon('arrow-up-right', 'i35') !!}</a>
+                                                <a href="{{ $card['url'] }}" class="cl-go fx-btn"><span class="{{ $km }}">{{ $L('Explore', 'ស្វែងយល់') }}</span>{!! $icon('arrow-up-right', 'i35') !!}</a>
                                             @endif
                                         </div>
                                     </div>
@@ -632,7 +643,7 @@
                     {{-- ================= Learning paths (course modules) ================= --}}
                     @if ($paths->isNotEmpty())
                         <section aria-labelledby="cl-paths-title">
-                            <div class="cl-sechead">
+                            <div class="cl-sechead" data-fx>
                                 <h2 id="cl-paths-title" class="{{ $km }}">{{ $L('Deepen your skills with a learning path', 'ពង្រឹងជំនាញរបស់អ្នកជាមួយគន្លងសិក្សា') }}</h2>
                                 <p class="{{ $km }}">{{ $L('Master your craft through curated, sequential courses designed for all levels.', 'ពង្រឹងជំនាញរបស់អ្នកតាមរយៈវគ្គសិក្សាជាប្រព័ន្ធ រៀបចំឡើងសម្រាប់គ្រប់កម្រិត។') }}</p>
                             </div>
@@ -648,7 +659,7 @@
                                             $pathUrl = ($card['enrolled'] && $first && filled($first->getRouteKey())) ? route('courses.lessons.show', [$card['course'], $first]) : $card['url'];
                                             $chip = $card['chips'][0] ?? 'Pd';
                                         @endphp
-                                        <article class="cl-path">
+                                        <article class="cl-path fx-spot">
                                             <div class="pic">
                                                 <img src="{{ $card['photo'] }}" alt="" loading="lazy" decoding="async">
                                                 <span class="cl-app cl-mono" data-app="{{ strtoupper($chip) }}">{{ $chip }}</span>
@@ -664,7 +675,7 @@
                                                     <p class="{{ $km }}">{{ $card['title'] }} — {{ $module->lessons->map(fn ($lesson) => $lesson->localized('title'))->implode(' · ') }}</p>
                                                 </div>
                                                 <div class="act">
-                                                    <a href="{{ $pathUrl }}" class="cl-btn-line"><span class="{{ $km }}">{{ $L('Start now', 'ចាប់ផ្តើមរៀន') }}</span></a>
+                                                    <a href="{{ $pathUrl }}" class="cl-btn-line fx-btn"><span class="{{ $km }}">{{ $L('Start now', 'ចាប់ផ្តើមរៀន') }}</span></a>
                                                 </div>
                                             </div>
                                         </article>
@@ -685,7 +696,7 @@
                                         $chip = $card['chips'][0] ?? 'Pd';
                                         $isNew = $course->created_at && $course->created_at->greaterThan(now()->subDays(60));
                                     @endphp
-                                    <article class="cl-feat">
+                                    <article class="cl-feat fx-spot">
                                         <div class="art">
                                             <img src="{{ str_replace('w=800', 'w=1000', $card['photo']) }}" alt="" loading="lazy" decoding="async">
                                             <span class="cl-new">{{ $isNew ? $L('New', 'ថ្មី') : $L('Featured', 'ពិសេស') }}</span>
@@ -699,7 +710,7 @@
                                                 @endif
                                             </div>
                                             <div class="bar">
-                                                <a href="{{ $card['enrolled'] ? $card['continue'] : $card['url'] }}" class="cl-play">{!! $icon('play') !!}<span class="{{ $km }}">{{ $card['enrolled'] ? $L('Continue', 'បន្តការរៀន') : $L('Watch now', 'ទស្សនាឥឡូវនេះ') }}</span></a>
+                                                <a href="{{ $card['enrolled'] ? $card['continue'] : $card['url'] }}" class="cl-play fx-btn">{!! $icon('play') !!}<span class="{{ $km }}">{{ $card['enrolled'] ? $L('Continue', 'បន្តការរៀន') : $L('Watch now', 'ទស្សនាឥឡូវនេះ') }}</span></a>
                                                 <small class="{{ $hmKm ? 'hm-km' : 'cl-mono' }}">{{ $card['duration'] !== '' ? $card['duration'] : $num($card['lessons']).' '.$L('lessons', 'មេរៀន') }}</small>
                                             </div>
                                         </div>
@@ -713,17 +724,21 @@
                     {{-- ================= Latest lessons ================= --}}
                     @if ($lessonsByBucket->isNotEmpty())
                         <section aria-labelledby="cl-latest-title" data-cl-latest>
-                            <div class="cl-sechead">
+                            <div class="cl-sechead" data-fx>
                                 <h2 id="cl-latest-title" class="{{ $km }}">{{ $L('Explore the latest tutorials', 'ស្វែងយល់ពីមេរៀនថ្មីៗបំផុត') }}</h2>
                             </div>
-                            <div class="cl-chips" role="group" aria-label="{{ $L('Lesson topics', 'ប្រធានបទមេរៀន') }}">
-                                @foreach ($lessonsByBucket as $bucket => $rows)
-                                    <button type="button" class="cl-chip" data-bucket="{{ $bucket }}" aria-pressed="{{ $bucket === $firstBucket ? 'true' : 'false' }}">
-                                        {!! $icon($buckets[$bucket][0], 'i35') !!}<span class="{{ $km }}">{{ $L($buckets[$bucket][1], $buckets[$bucket][2]) }}</span>
-                                    </button>
-                                @endforeach
+                            <div class="cl-chips">
+                                <div class="hm-tabs" data-jelly-tabs data-target="#cl-lessons [data-category]">
+                                    <div class="hm-tabs-track" role="tablist" aria-label="{{ $L('Lesson topics', 'ប្រធានបទមេរៀន') }}">
+                                        <span class="hm-jelly-trail" aria-hidden="true"></span>
+                                        <span class="hm-jelly" aria-hidden="true"><span class="hm-jelly-blob"></span><span class="hm-sparks"></span></span>
+                                        @foreach ($lessonsByBucket as $bucket => $rows)
+                                            <button type="button" class="hm-tab cl-tab {{ $km }}" role="tab" data-value="{{ $bucket }}" aria-selected="{{ $bucket === $firstBucket ? 'true' : 'false' }}">{!! $icon($buckets[$bucket][0], 'i35') !!}<span>{{ $L($buckets[$bucket][1], $buckets[$bucket][2]) }}</span></button>
+                                        @endforeach
+                                    </div>
+                                </div>
                             </div>
-                            <div class="cl-lessons">
+                            <div class="cl-lessons" id="cl-lessons">
                                 @foreach ($lessonsByBucket as $bucket => $rows)
                                     @foreach ($rows as ['lesson' => $lesson, 'card' => $card])
                                         @php
@@ -731,7 +746,7 @@
                                             $yt = $lesson->youtubeId();
                                             $lessonUrl = ($card['enrolled'] && filled($lesson->getRouteKey())) ? route('courses.lessons.show', [$card['course'], $lesson]) : $card['url'];
                                         @endphp
-                                        <a href="{{ $lessonUrl }}" class="cl-lesson" data-bucket="{{ $bucket }}" @if ($bucket !== $firstBucket) hidden @endif>
+                                        <a href="{{ $lessonUrl }}" class="cl-lesson" data-category="{{ $bucket }}" data-fx @if ($bucket !== $firstBucket) hidden @endif>
                                             <span class="pic">
                                                 <img src="{{ $yt ? 'https://i.ytimg.com/vi/'.$yt.'/hqdefault.jpg' : $card['photo'] }}" alt="" loading="lazy" decoding="async">
                                                 <span class="cl-app cl-mono" data-app="{{ strtoupper($chip) }}">{{ $chip }}</span>
@@ -750,7 +765,7 @@
 
                     {{-- ================= Digital Academy: a certificate for every course ================= --}}
                     <section aria-labelledby="cl-acad-title">
-                        <div class="cl-sechead">
+                        <div class="cl-sechead" data-fx>
                             <h2 id="cl-acad-title" class="{{ $km }}">{{ $L('Earn a certificate with Piseth.Design Digital Academy', 'ទទួលបានវិញ្ញាបនបត្របញ្ជាក់សមត្ថភាព (Digital Academy)') }}</h2>
                             <p class="{{ $km }}">{{ $L('Validate your industry skills with sequential, portfolio-ready courses and a verified certificate.', 'បញ្ជាក់សមត្ថភាពរបស់អ្នកតាមរយៈមេរៀនអនុវត្តជាក់ស្តែង និងទទួលបានវិញ្ញាបនបត្រផ្លូវការ។') }}</p>
                         </div>
@@ -762,7 +777,7 @@
                             <div class="cl-track cl-track--1" data-track>
                                 @foreach ($cards as $card)
                                     @php $chip = $card['chips'][0] ?? 'Pd'; @endphp
-                                    <article class="cl-feat cl-acad" data-app="{{ strtoupper($chip) }}">
+                                    <article class="cl-feat cl-acad fx-spot" data-app="{{ strtoupper($chip) }}">
                                         <div class="art">
                                             <img src="{{ str_replace('w=800', 'w=1000', $card['photo']) }}" alt="" loading="lazy" decoding="async">
                                             <span class="cl-app cl-mono" data-app="{{ strtoupper($chip) }}">{{ $chip }}</span>
@@ -781,7 +796,7 @@
                                                 @endif
                                             </div>
                                             <div class="bar line">
-                                                <a href="{{ $card['enrolled'] ? $card['continue'] : $card['url'] }}" class="cl-play cl-play--lg">{!! $icon('play') !!}<span class="{{ $km }}">{{ $card['enrolled'] ? $L('Continue', 'បន្តការរៀន') : $L('Learn now', 'រៀនឥឡូវនេះ') }}</span></a>
+                                                <a href="{{ $card['enrolled'] ? $card['continue'] : $card['url'] }}" class="cl-play cl-play--lg fx-btn">{!! $icon('play') !!}<span class="{{ $km }}">{{ $card['enrolled'] ? $L('Continue', 'បន្តការរៀន') : $L('Learn now', 'រៀនឥឡូវនេះ') }}</span></a>
                                                 <small>{!! $icon('grad', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : 'cl-mono' }}">{{ $num($card['lessons']) }} {{ $L('lessons', 'មេរៀន') }}</span></small>
                                             </div>
                                         </div>
@@ -870,17 +885,6 @@
                     }
                 });
 
-                /* ---- latest lessons: topic chips ---- */
-                var latest = page.querySelector('[data-cl-latest]');
-                if (latest) {
-                    latest.addEventListener('click', function (e) {
-                        var chip = e.target.closest('.cl-chip');
-                        if (!chip) return;
-                        var b = chip.getAttribute('data-bucket');
-                        latest.querySelectorAll('.cl-chip').forEach(function (c) { c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'); });
-                        latest.querySelectorAll('.cl-lesson').forEach(function (l) { l.hidden = l.getAttribute('data-bucket') !== b; });
-                    });
-                }
             })();
         </script>
     </x-slot:scripts>

@@ -47,4 +47,5 @@
     html.dark .tk-foot .late { color: #FB7185; }
     .tk-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
     html:lang(km) .hm-body :is(.tk-cap h3) { line-height: 1.6; }
+    html:lang(km) .tk-num--sm { font-family: inherit; }
 </style>

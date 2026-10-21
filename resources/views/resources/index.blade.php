@@ -40,7 +40,11 @@
         <style>
             .rs-main { font-family: Inter, 'Noto Sans Khmer', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; }
             .rs-page { display: flex; flex-direction: column; gap: 2rem; padding-top: 2.5rem; padding-bottom: 6rem; }
-            .rs-head { display: flex; flex-direction: column; justify-content: space-between; gap: 1.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--line2); }
+            .rs-head { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: space-between; gap: 1.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--line2); }
+            .rs-head .fx-aurora { inset: -2rem 0 0; border-radius: 1.5rem; }
+            .rs-intro, .rs-manage { position: relative; z-index: 2; }
+            .rs-files { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: none; }
+            @media (min-width: 1024px) { .rs-files { display: block; } }
             @media (min-width: 768px) { .rs-head { flex-direction: row; align-items: flex-end; } }
             .rs-intro { max-width: 48rem; display: flex; flex-direction: column; gap: .75rem; }
             .rs-kicker { margin: 0; }
@@ -184,10 +188,18 @@
 
     <div class="hm-wrap rs-page">
 
-        <div class="rs-head">
+        <div class="rs-head" data-fx-parallax>
+            <div class="fx-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="rs-files" aria-hidden="true">
+                <span class="fx-float a" style="top: 8%; right: 30%; --depth: 14px"><span class="fx-tile" data-app="PS" style="width:2.5rem; height:2.5rem; font-size:.6875rem"><span>.PSD</span></span></span>
+                <span class="fx-float c" style="top: 2%; right: 4%; --depth: 20px"><span class="fx-tile" data-app="AI" style="width:2.5rem; height:2.5rem; font-size:.6875rem"><span>.AI</span></span></span>
+                <span class="fx-float b" style="top: 40%; right: 18%; --depth: 10px"><span class="fx-tile" data-app="FG" style="width:2.5rem; height:2.5rem; font-size:.6875rem; color:#0ACF83"><span>.FIG</span></span></span>
+                <span class="fx-star" style="top: 18%; right: 14%"></span>
+                <span class="fx-star" style="top: 50%; right: 34%; animation-delay: 1.2s"></span>
+            </div>
             <div class="rs-intro">
                 <p class="hm-label rs-kicker"><span>Creative Studio Toolkit</span><span aria-hidden="true">·</span><span class="k hm-km">{{ $L('Curated Design Assets', 'បណ្ណាល័យធនធាន និងឯកសាររចនា') }}</span></p>
-                <h1 class="rs-h1 {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Design Resources Library', 'បណ្ណាល័យធនធានរចនា') }}</h1>
+                <h1 class="rs-h1 {{ $hmKm ? 'hm-km' : '' }}">@if ($hmKm)បណ្ណាល័យ<span class="fx-grad">ធនធានរចនា</span>@else Design Resources <span class="fx-grad">Library</span>@endif</h1>
                 <p class="rs-lead {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Download industry-standard presets, Khmer typography specimens, vector grid kits, and Figma component libraries prepared by Teacher Piseth Yoeurn.', 'ទាញយក Presets ស្តង់ដារ, ពុម្ពអក្សរខ្មែរ, Vector Kit និង Figma Library រៀបចំដោយលោកគ្រូ យឿន ពិសិដ្ឋ។') }}</p>
             </div>
             @if ($isAdmin)
@@ -253,7 +265,7 @@
             <div class="rs-grid" id="rs-grid">
                 @foreach ($resources as $i => $r)
                     @php $item = $items[$i]; @endphp
-                    <article class="rs-card" data-id="{{ $item['id'] }}" data-category="{{ $r->category }}"
+                    <article class="rs-card fx-spot" data-fx data-id="{{ $item['id'] }}" data-category="{{ $r->category }}"
                         data-search="{{ mb_strtolower(implode(' ', array_filter([$r->title_en, $r->title_km, $r->type, $r->software, $r->localized('description'), implode(' ', $r->tagList())]))) }}">
                         <div class="rs-thumb">
                             <button type="button" class="rs-hit" data-preview aria-label="{{ $L('Preview', 'មើលគំរូ') }}: {{ $r->title_en }}">
@@ -305,7 +317,7 @@
                         <div class="rs-foot">
                             <span class="rs-count hm-mono"><span data-downloads>{{ number_format($r->downloads_count) }}</span> {{ $text['downloads'] }}</span>
                             @if ($item['downloadUrl'])
-                                <a href="{{ $item['downloadUrl'] }}" class="rs-dl" data-download @if ($item['link']) target="_blank" rel="noopener noreferrer" @endif>
+                                <a href="{{ $item['downloadUrl'] }}" class="rs-dl fx-btn" data-download @if ($item['link']) target="_blank" rel="noopener noreferrer" @endif>
                                     {!! $icon('download', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Download', 'ទាញយក') }}</span>
                                 </a>
                             @else
@@ -356,7 +368,7 @@
                             @else
                                 <a href="{{ route('login') }}" class="rs-dmark">{!! $icon('bookmark', 'i35') !!}<span>{{ $text['bookmark'] }}</span></a>
                             @endauth
-                            <a href="#" class="rs-dl" data-modal-download>{!! $icon('download') !!}<span class="hm-km">{{ $L('Download Resource', 'ទាញយកឯកសារនេះ') }}</span></a>
+                            <a href="#" class="rs-dl fx-btn" data-modal-download>{!! $icon('download') !!}<span class="hm-km">{{ $L('Download Resource', 'ទាញយកឯកសារនេះ') }}</span></a>
                         </div>
                     </div>
                 </div>
@@ -431,6 +443,8 @@
                     if (!item) return;
                     item.saved = !item.saved;          // show it straight away; the server confirms below
                     paintSaved(id);
+                    var mark = grid.querySelector('.rs-card[data-id="' + id + '"] [data-bookmark]');
+                    if (item.saved && mark && window.fxBurst) fxBurst(mark, '#4DA3FF');
                     fetch(item.bookmarkUrl, {
                         method: 'POST',
                         headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
