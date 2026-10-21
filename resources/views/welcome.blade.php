@@ -1,270 +1,112 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
+{{-- Homepage, built on the live piseth.design design (components/live-layout). --}}
+@php
+    $hmKm = app()->getLocale() === 'km';
+    // Home copy in both languages, kept on this page so no shared file changes.
+    $L = fn (string $en, string $km) => $hmKm ? $km : $en;
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Piseth.Design Classroom</title>
-    @include('partials._favicon')
+    // Line icons and the blank profile picture, shared with the other live-design pages.
+    $icon = fn (string $name, string $class = 'i4') => \App\Support\LiveIcon::svg($name, $class);
+    $blank = \App\Support\LiveIcon::blankProfile();
 
-    {{-- Set theme before paint so there's no flash of the wrong theme (same key and default as every page). --}}
-    <script>
-        (function() {
-            var saved = localStorage.getItem('pd-theme');
-            var theme = saved || 'dark';
-            if (theme === 'dark') document.documentElement.classList.add('dark');
-        })();
-    </script>
+    // ---------- courses: real courses, shown with the live card design ----------
+    $hmPhotos = [
+        'ps' => 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80',
+        'ai' => 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
+        'id' => 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
+        'gd' => 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=800&auto=format&fit=crop&q=80',
+        'ux' => 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80',
+        'mo' => 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80',
+    ];
+    // course mark => [software chips, software line, photo, filter group]
+    $hmSoftware = [
+        'ps' => [['Ps'], 'Photoshop', 'ps', 'Graphic Design'],
+        'ai' => [['Ai'], 'Illustrator', 'ai', 'Graphic Design'],
+        'id' => [['Id'], 'InDesign', 'id', 'Graphic Design'],
+        'gd' => [['Ps', 'Ai', 'Id'], 'Photoshop + Illustrator + InDesign', 'gd', 'Graphic Design'],
+        'fg' => [['Fg'], 'Figma', 'ux', 'UX/UI Design'],
+        'xd' => [['Xd'], 'Adobe XD', 'ux', 'UX/UI Design'],
+        'ae' => [['Ae'], 'After Effects', 'mo', 'Motion Graphics'],
+        'pr' => [['Pr'], 'Premiere Pro', 'mo', 'Motion Graphics'],
+    ];
+    $hmGroupOf = function (string $category): string {
+        $c = strtolower($category);
+        if (preg_match('/ux|ui|figma|xd|web|app/', $c)) return 'UX/UI Design';
+        if (preg_match('/motion|after effects|animation|video|premiere/', $c)) return 'Motion Graphics';
+        return 'Graphic Design';
+    };
 
-    @include('partials._head-shared')
+    $hmUser = auth()->user();
+    $hmUser?->loadMissing('enrollments');
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    {{-- Archivo + Kantumruy Pro: the promotion bar and Telegram popup. Inter, Noto Sans Khmer, JetBrains Mono: this page. --}}
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@700;800;900&family=Kantumruy+Pro:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Khmer:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    $hmCards = collect($courses ?? [])->values()->map(function ($course) use ($hmSoftware, $hmPhotos, $hmGroupOf, $hmUser, $L) {
+        $mark = trim((string) $course->mark);
+        $sw = $hmSoftware[strtolower($mark)] ?? null;
+        $category = (string) $course->category;
+        $minutes = $course->durationMinutes();
+        $enrollment = $hmUser?->enrollmentFor($course);
+        $lesson = $enrollment?->continueLesson();
+        $description = trim(strip_tags((string) $course->localized('description'))) ?: trim((string) $course->localized('subtitle'));
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+        return [
+            'course' => $course,
+            'title' => $course->localized('title'),
+            'chips' => $sw[0] ?? array_values(array_filter([$mark])),
+            'tools' => $sw[1] ?? ($category ?: 'Design'),
+            'photo' => $course->thumbnailSrc() ?: $hmPhotos[$sw[2] ?? 'gd'],
+            'group' => $sw[3] ?? $hmGroupOf($category),
+            'category' => $category,
+            'description' => \Illuminate\Support\Str::limit($description, 240),
+            'level' => $course->level ? __($course->level) : '',
+            'duration' => $minutes > 0 ? $course->formattedDuration() : '',
+            'lessons' => (int) $course->lessons_count,
+            'enrolled' => $enrollment !== null,
+            'progress' => $enrollment ? $course->progressPercent($hmUser) : 0,
+            'continue' => ($lesson && filled($lesson->getRouteKey())) ? route('courses.lessons.show', [$course, $lesson]) : route('courses.show', $course),
+            'url' => route('courses.show', $course),
+        ];
+    });
+    $hmGroups = ['Graphic Design', 'UX/UI Design', 'Motion Graphics'];
 
-    <style>
-        /* ------------------------------------------------------------------
-           Variables used by the shared top bar, promotion bar and Telegram
-           dialog (same values as every other page, so they look identical).
-           ------------------------------------------------------------------ */
-        :root {
-            --paper: #FFFFFF;
-            --surface: #F4F4F6;
-            --ink: #0A0A0A;
-            --graphite: #5E5E5E;
-            --mist: #E6E6EA;
-            --action: #0866FF;
-            --action-ink: #0062EB;
-            --action-soft: #EAF4FF;
-            --danger: #DC2626;
-            --blue: #0866FF;
-            --promo-bg: #EEF5FF;
-            --promo-line: #D6E6FF;
-        }
+    // ---------- teacher ----------
+    $hmSkills = [
+        ['🎨', 'រចនាក្រាហ្វិក និង Branding', 'Branding'],
+        ['🎬', 'Motion Graphics & Animation', 'Motion'],
+        ['🖥️', 'UI/UX Design & Figma', 'UI/UX'],
+        ['📱', 'Social Media Design', 'Social Media'],
+        ['📦', 'Packaging & Product Design', 'Packaging'],
+        ['🎥', 'Video & Visual Content', 'Production'],
+        ['🤖', 'AI for Design & Creative Workflow', 'AI Design'],
+        ['👨‍🏫', 'បង្រៀន Graphic Design និង Motion Design', 'Teaching'],
+        ['💡', 'Design Thinking & Creative Direction', 'Strategy'],
+        ['💻', 'Adobe Photoshop, Illustrator, InDesign & After Effects', 'Software'],
+    ];
 
-        html.dark {
-            --paper: #0A0A0A;
-            --surface: #151516;
-            --ink: #FFFFFF;
-            --graphite: #A1A1A8;
-            --mist: #26262A;
-            --action: #0866FF;
-            --action-ink: #3D85FF;
-            --action-soft: rgba(24, 119, 242, .18);
-            --danger: #FF5A5F;
-            --blue: #3D85FF;
-            --promo-bg: #0B1A33;
-            --promo-line: #16294A;
-        }
+    // ---------- student showcase (same projects as the live site) ----------
+    $hmProjects = [
+        ['id' => 'sw-1', 'studentName' => 'Dara Somnang', 'studentNameKh' => 'ដារ៉ា សំណាង', 'studentAvatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', 'course' => 'Graphic Design', 'title' => 'Angkor Heritage Minimalist Identity', 'titleKh' => 'ប្រព័ន្ធអត្តសញ្ញាណបេតិកភណ្ឌអង្គរ', 'image' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80', 'likes' => 142, 'badge' => "Teacher's Choice", 'tools' => ['Illustrator', 'InDesign', 'Photoshop'], 'grade' => '9.8 / 10', 'description' => 'A modern minimalist brand identity and packaging system celebrating classical Angkorian architectural proportions and traditional Khmer stone carvings.', 'teacherCritique' => 'Outstanding optical balance between the modern sans-serif type and traditional Khmer display font. Grid proportion is exemplary.'],
+        ['id' => 'sw-2', 'studentName' => 'Bopha Vann', 'studentNameKh' => 'វណ្ណ បុប្ផា', 'studentAvatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80', 'course' => 'UX/UI Design', 'title' => 'Phnom Penh Urban Transit UI Kit', 'titleKh' => 'កម្មវិធី និង UI Kit ធ្វើដំណើររាជធានីភ្នំពេញ', 'image' => 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80', 'likes' => 198, 'badge' => 'Featured Project', 'tools' => ['Figma', 'FigJam', 'Protopie'], 'grade' => '9.6 / 10', 'description' => 'Clean mobile ticketing and real-time bus navigation application designed for Phnom Penh commuters with full Khmer localized typography and dark mode support.', 'teacherCritique' => 'Superb design token structure and auto-layout discipline. Micro-interactions for route tracking are smooth and intuitive.'],
+        ['id' => 'sw-3', 'studentName' => 'Rithy Kem', 'studentNameKh' => 'កែម រិទ្ធី', 'studentAvatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80', 'course' => 'Motion Graphics', 'title' => 'Kinetic Khmer Calligraphy Showreel', 'titleKh' => 'ចលនាអក្សរឆ្លាក់ខ្មែរ Kinetic Calligraphy', 'image' => 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80', 'likes' => 215, 'badge' => 'Top Honors', 'tools' => ['After Effects', 'Cinema 4D', 'Illustrator'], 'grade' => '9.9 / 10', 'description' => 'Dynamic 3D typography motion reel exploring traditional Khmer calligraphy morphing into contemporary geometric spatial forms with fluid rhythm.', 'teacherCritique' => 'Masterful easing curves and secondary overshoot physics. Setting a new benchmark for motion typography in Cambodia.'],
+        ['id' => 'sw-4', 'studentName' => 'Channary Pich', 'studentNameKh' => 'ពេជ្រ ចាន់ណារី', 'studentAvatar' => 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80', 'course' => 'Graphic Design', 'title' => 'Mondulkiri Specialty Coffee Packaging', 'titleKh' => 'ការរចនាវេចខ្ចប់កាហ្វេពិសេសមណ្ឌលគិរី', 'image' => 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80', 'likes' => 167, 'badge' => 'Best Packaging', 'tools' => ['Illustrator', 'Dimension', 'Photoshop'], 'grade' => '9.5 / 10', 'description' => 'Eco-conscious craft paper packaging featuring indigenous botanical motifs and bespoke dual-script roast profile typographic labels.', 'teacherCritique' => 'The tactile texture choice and color palette evoke the authentic highland soil. Highly commercial and shelf-ready.'],
+        ['id' => 'sw-5', 'studentName' => 'Sothea Chan', 'studentNameKh' => 'ចាន់ សុធា', 'studentAvatar' => 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80', 'course' => 'UX/UI Design', 'title' => 'Siem Reap Heritage AR Tourism Guide', 'titleKh' => 'កម្មវិធីណែនាំទេសចរណ៍ AR សៀមរាប', 'image' => 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=80', 'likes' => 184, 'badge' => 'Best Prototype', 'tools' => ['Figma', 'Blender', 'Spline'], 'grade' => '9.7 / 10', 'description' => 'Immersive augmented reality museum and temple navigation experience with multilingual audio tours and interactive 3D artifact inspect.', 'teacherCritique' => 'Impeccable accessibility contrast and spatial UX. The card navigation gestures feel natural on one-handed mobile devices.'],
+        ['id' => 'sw-6', 'studentName' => 'Visal Mao', 'studentNameKh' => 'ម៉ៅ វិសាល', 'studentAvatar' => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80', 'course' => 'Motion Graphics', 'title' => 'Apsara Cyberpunk Kinetic Poster', 'titleKh' => 'Poster ចលនាកូនកាត់ Apsara Cyberpunk', 'image' => 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80', 'likes' => 243, 'badge' => 'Best Visual FX', 'tools' => ['After Effects', 'Blender', 'Octane'], 'grade' => '9.9 / 10', 'description' => 'Futuristic animated poster series merging classical Cambodian classical dance hand postures with neon holographic particle simulations.', 'teacherCritique' => 'Stunning artistic vision and audio-visual synchronization. Exemplifies how traditional Cambodian art can evolve into the digital era.'],
+    ];
+    // liked when the page first loads, as on the live site
+    $hmDefaultLiked = ['sw-1', 'sw-3'];
 
-        body {
-            font-family: 'Archivo', 'Kantumruy Pro', system-ui, sans-serif;
-            transition: background-color .45s ease, color .45s ease;
-        }
+    $hmStartUrl = auth()->check() ? route('learning.index') : route('register');
 
-        .font-display { font-family: 'Archivo Expanded', 'Kantumruy Pro', system-ui, sans-serif; }
-        [x-cloak] { display: none !important; }
+    // Words the page script shows.
+    $hmText = [
+        'copied' => 'Copied Link!',
+        'share' => 'Share',
+        'saveWish' => $L('Save to Wishlist', 'រក្សាទុកក្នុងបញ្ជីចង់រៀន'),
+        'removeWish' => $L('Remove from Wishlist', 'ដកចេញពីបញ្ជីចង់រៀន'),
+    ];
+@endphp
 
-        /* Theme switch: a circle of the incoming colour washes over the page. */
-        .theme-ripple {
-            position: fixed; z-index: 90; width: 0; height: 0; border-radius: 50%;
-            pointer-events: none; transform: translate(-50%, -50%);
-            animation: theme-ripple-grow .62s cubic-bezier(.4, 0, .2, 1) forwards;
-        }
-        @keyframes theme-ripple-grow {
-            0% { width: 0; height: 0; opacity: 1; }
-            62% { opacity: 1; }
-            100% { width: var(--r); height: var(--r); opacity: 0; }
-        }
-
-
-        /* ==================================================================
-           HOME — colours (light, then dark)
-           ================================================================== */
-        .hm-body {
-            --pg: #F5F7FA;
-            --card: #FFFFFF;
-            --card2: #FFFFFF;
-            --line: #E4E6EB;
-            --line2: rgba(226, 232, 240, .8);
-            --line3: #F1F5F9;
-            --ink: #1C1C1E;
-            --mut: #65676B;
-            --blue: #1877F2;
-            --blue2: #1877F2;
-            --sky: #4DA3FF;
-            --strong: #0F172A;
-            --body: #475569;
-            --soft: #64748B;
-            --faint: #94A3B8;
-            --chip: #F1F5F9;
-            --chip2: #F8FAFC;
-            --chip-hov: #FFFFFF;
-            --tab-on: #FFFFFF;
-            --hov: #F5F7FA;
-            --s800: #1E293B;
-            --s700: #334155;
-            --sep: #CBD5E1;
-            --av-a: #E2E8F0;
-            --av-b: #CBD5E1;
-            --av-fg: #FFFFFF;
-            --sh-lg: 0 10px 15px -3px rgba(15, 23, 42, .05), 0 4px 6px -4px rgba(15, 23, 42, .05);
-            --sh-xl: 0 20px 25px -5px rgba(15, 23, 42, .05), 0 8px 10px -6px rgba(15, 23, 42, .05);
-            background: var(--pg);
-            color: var(--ink);
-        }
-
-        html.dark .hm-body {
-            --pg: #0B0B0D;
-            --card: #1C1C1E;
-            --card2: #151B23;
-            --line: #2E3034;
-            --line2: #222936;
-            --line3: #222936;
-            --ink: #F5F5F7;
-            --mut: #A1A1A6;
-            --blue: #4595FF;
-            --blue2: #4DA3FF;
-            --strong: #FFFFFF;
-            --body: #CBD5E1;
-            --soft: #94A3B8;
-            --chip: #151B23;
-            --chip2: #151B23;
-            --chip-hov: #1C232D;
-            --tab-on: #1C232D;
-            --hov: #242629;
-            --s800: #E2E8F0;
-            --s700: #CBD5E1;
-            --sep: #334155;
-            --av-a: #2A313C;
-            --av-b: #1A2029;
-            --av-fg: #4B5563;
-            --sh-lg: 0 10px 15px -3px rgba(0, 0, 0, .4), 0 4px 6px -4px rgba(0, 0, 0, .4);
-            --sh-xl: 0 20px 25px -5px rgba(0, 0, 0, .4), 0 8px 10px -6px rgba(0, 0, 0, .4);
-        }
-
-        .hm-main, .hm-footer, .hm-prefs, .hm-modal, .hm-bnav {
-            font-family: Inter, 'Noto Sans Khmer', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-        }
-        .hm-km { font-family: 'Noto Sans Khmer', Inter, sans-serif; }
-        .hm-mono { font-family: 'JetBrains Mono', 'Noto Sans Khmer', ui-monospace, SFMono-Regular, Menlo, monospace; }
-        .hm-wrap { max-width: 80rem; margin: 0 auto; padding: 0 1rem; }
-        @media (min-width: 640px) { .hm-wrap { padding: 0 1.5rem; } }
-        @media (min-width: 1024px) { .hm-wrap { padding: 0 2rem; } }
-        .hm-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-        .hm-main a { text-decoration: none; }
-        .i3 { width: .75rem; height: .75rem; flex-shrink: 0; }
-        .i35 { width: .875rem; height: .875rem; flex-shrink: 0; }
-        .i4 { width: 1rem; height: 1rem; flex-shrink: 0; }
-        .i5 { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
-
-        /* sections are spaced like the live site: 5rem, 6rem from 640px */
-        .hm-main { display: flex; flex-direction: column; gap: 5rem; padding-bottom: 5rem; }
-        @media (min-width: 640px) { .hm-main { gap: 6rem; } }
-        .hm-main > section { width: 100%; min-width: 0; scroll-margin-top: 5rem; }
-
-        /* ---------- blank profile ---------- */
-        .hm-avatar { position: relative; flex-shrink: 0; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; border-radius: 9999px; background: linear-gradient(to bottom, var(--av-a), var(--av-b)); color: var(--av-fg); }
-        .hm-avatar svg { width: 82%; height: 82%; }
-
-        /* ---------- section headings ---------- */
-        .hm-head { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem; }
-        @media (min-width: 768px) { .hm-head { flex-direction: row; align-items: flex-end; justify-content: space-between; } }
-        .hm-head > div:first-child { min-width: 0; }
-        .hm-label { display: flex; align-items: center; gap: .5rem; margin: 0 0 .25rem; font-size: .75rem; line-height: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--sky); }
-        .hm-h2 { margin: 0; font-size: 1.5rem; line-height: 2rem; font-weight: 700; color: var(--strong); }
-        @media (min-width: 640px) { .hm-h2 { font-size: 1.875rem; line-height: 2.25rem; } }
-        .hm-desc { margin: .25rem 0 0; max-width: 36rem; font-size: .75rem; line-height: 1rem; color: var(--soft); }
-        @media (min-width: 640px) { .hm-desc { font-size: .875rem; line-height: 1.25rem; } }
-
-        /* ==================================================================
-           TOP BAR (the live site's header; this page only)
-           ================================================================== */
-        .hm-header { position: sticky; top: 0; z-index: 40; width: 100%; background: rgba(255, 255, 255, .85); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); font-family: Inter, 'Noto Sans Khmer', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; transition: background-color .2s ease, border-color .2s ease; }
-        html.dark .hm-header { background: rgba(28, 28, 30, .85); }
-        .hm-hbar { max-width: 80rem; height: 4rem; margin: 0 auto; padding: 0 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-        @media (min-width: 640px) { .hm-hbar { padding: 0 1.5rem; } }
-        @media (min-width: 1024px) { .hm-hbar { padding: 0 2rem; } }
-        .hm-hlogo { flex-shrink: 0; display: flex; align-items: center; min-height: 44px; font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: -.025em; color: var(--ink); text-decoration: none; }
-        @media (min-width: 640px) { .hm-hlogo { font-size: 1.25rem; } }
-        .hm-hlogo span { color: var(--blue); }
-        .hm-hnav { display: none; }
-        @media (min-width: 768px) { .hm-hnav { display: flex; align-items: center; gap: 2rem; } }
-        .hm-hnav a { position: relative; padding: .375rem 0; font-size: .875rem; line-height: 1.25rem; font-weight: 500; white-space: nowrap; color: var(--mut); text-decoration: none; transition: color .15s ease; }
-        .hm-hnav a:hover { color: var(--ink); }
-        .hm-hnav a[aria-current="page"] { font-weight: 600; color: var(--blue); }
-        .hm-hnav a[aria-current="page"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 9999px; background: var(--blue); }
-        .hm-hright { position: relative; display: flex; align-items: center; gap: .5rem; }
-        @media (min-width: 640px) { .hm-hright { gap: .625rem; } }
-        .hm-hbell { position: relative; display: flex; padding: .5rem; border: 0; border-radius: .75rem; background: transparent; color: var(--mut); cursor: pointer; transition: all .15s ease; }
-        .hm-hbell:hover, .hm-hbell[aria-expanded="true"] { color: var(--ink); background: #F5F7FA; }
-        html.dark .hm-hbell:hover, html.dark .hm-hbell[aria-expanded="true"] { background: #242629; }
-        .hm-hbell .dot { position: absolute; top: .375rem; right: .375rem; width: .5rem; height: .5rem; border-radius: 9999px; background: #1877F2; box-shadow: 0 0 0 2px #fff; }
-        html.dark .hm-hbell .dot { box-shadow: 0 0 0 2px #1C1C1E; }
-        .hm-havatar { display: flex; padding: 2px; border: 0; border-radius: 9999px; background: transparent; cursor: pointer; transition: box-shadow .15s ease; }
-        .hm-havatar:hover, .hm-havatar[aria-expanded="true"] { box-shadow: 0 0 0 2px rgba(24, 119, 242, .4); }
-        .hm-havatar .pd-avatar { box-shadow: 0 0 0 1px var(--line); }
-        .hm-hsignin { display: inline-flex; align-items: center; gap: .375rem; padding: .375rem .75rem; border-radius: .75rem; background: #4DA3FF; color: #fff; font-size: .75rem; line-height: 1rem; font-weight: 600; text-decoration: none; white-space: nowrap; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); transition: background .15s ease; }
-        .hm-hsignin:hover { background: #3892F3; }
-        .hm-hportal, .hm-hdash { display: none; align-items: center; gap: .375rem; padding: .375rem .75rem; border-radius: .5rem; font-size: .75rem; line-height: 1rem; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background .15s ease; }
-        @media (min-width: 1024px) { .hm-hportal, .hm-hdash { display: inline-flex; } }
-        .hm-hportal { color: #4DA3FF; background: #EAF5FF; border: 1px solid rgba(77, 163, 255, .3); }
-        .hm-hportal:hover { background: #D9EDFF; }
-        html.dark .hm-hportal { background: rgba(77, 163, 255, .15); }
-        html.dark .hm-hportal:hover { background: rgba(77, 163, 255, .25); }
-        .hm-hdash { color: #059669; background: #ECFDF5; border: 1px solid rgba(16, 185, 129, .3); }
-        .hm-hdash:hover { background: #D1FAE5; }
-        html.dark .hm-hdash { color: #34D399; background: rgba(2, 44, 34, .3); }
-        html.dark .hm-hdash:hover { background: rgba(2, 44, 34, .5); }
-        .hm-hpanel { position: absolute; top: calc(100% + .5rem); right: 0; z-index: 50; width: min(16rem, calc(100vw - 2rem)); overflow: hidden; border-radius: .75rem; background: #fff; border: 1px solid #E2E8F0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1); transform-origin: top right; animation: hm-zoom-in .15s ease-out both; }
-        html.dark .hm-hpanel { background: #151B23; border-color: #222936; }
-        .hm-hpanel--bell { width: min(18rem, calc(100vw - 2rem)); }
-        .hm-hpanel-head { padding: .875rem; border-bottom: 1px solid #F1F5F9; }
-        html.dark .hm-hpanel-head { border-color: #222936; }
-        .hm-hrow { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
-        .hm-hname { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; line-height: 1rem; font-weight: 600; color: var(--strong); }
-        .hm-hmail { margin: .125rem 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--soft); }
-        .hm-hrole { flex-shrink: 0; padding: .125rem .5rem; border-radius: 9999px; font-size: 9px; font-weight: 700; text-transform: uppercase; background: #ECFDF5; color: #059669; border: 1px solid rgba(16, 185, 129, .2); }
-        html.dark .hm-hrole { background: rgba(2, 44, 34, .4); color: #34D399; }
-        .hm-hrole--teacher, html.dark .hm-hrole--teacher { background: rgba(77, 163, 255, .15); color: #4DA3FF; border-color: rgba(77, 163, 255, .3); }
-        .hm-hmenu { padding: .25rem; font-size: .75rem; line-height: 1rem; }
-        .hm-hmenu form { margin: 0; }
-        .hm-hitem { width: 100%; display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; border: 0; border-radius: .5rem; background: transparent; font: inherit; text-align: left; text-decoration: none; color: #334155; cursor: pointer; transition: background .15s ease; }
-        html.dark .hm-hitem { color: #CBD5E1; }
-        .hm-hitem:hover { background: #F1F5F9; }
-        html.dark .hm-hitem:hover { background: #1C232D; }
-        .hm-hitem svg { color: #4DA3FF; }
-        .hm-hitem--accent, html.dark .hm-hitem--accent { font-weight: 600; color: #4DA3FF; background: rgba(77, 163, 255, .1); }
-        .hm-hitem--accent:hover, html.dark .hm-hitem--accent:hover { background: rgba(77, 163, 255, .2); }
-        .hm-hitem--split { justify-content: space-between; }
-        .hm-hitem--split > span:first-child { display: flex; align-items: center; gap: .5rem; }
-        .hm-hitem .hint { font-size: 10px; font-weight: 600; color: #4DA3FF; }
-        .hm-hitem .hint--mono { font-weight: 400; color: #94A3B8; }
-        .hm-hitem--danger, html.dark .hm-hitem--danger { font-weight: 600; color: #E11D48; }
-        html.dark .hm-hitem--danger { color: #FB7185; }
-        .hm-hitem--danger svg { color: #F43F5E; }
-        .hm-hitem--danger:hover { background: #FFF1F2; }
-        html.dark .hm-hitem--danger:hover { background: rgba(76, 5, 25, .4); }
-        .hm-hsep { margin-top: .25rem; padding-top: .25rem; border-top: 1px solid #F1F5F9; }
-        html.dark .hm-hsep { border-color: #222936; }
-        .hm-hbrand { display: flex; align-items: center; gap: .625rem; }
-        .hm-hbrand img { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
-        .hm-hnote { display: block; padding: .875rem; text-decoration: none; transition: background .15s ease; }
-        .hm-hnote:hover { background: #F8FAFC; }
-        html.dark .hm-hnote:hover { background: #1C232D; }
-        .hm-hnote .pill { display: inline-block; padding: .125rem .5rem; border-radius: 9999px; background: rgba(77, 163, 255, .15); font-size: 10px; font-weight: 700; color: #4DA3FF; }
-        .hm-hnote .t { display: block; margin-top: .375rem; font-size: .75rem; line-height: 1rem; font-weight: 600; color: var(--strong); }
-        .hm-hnote .m { display: block; margin-top: .125rem; font-size: 11px; line-height: 1.5; color: var(--soft); }
-        .hm-hnote .go { display: inline-flex; align-items: center; gap: .25rem; margin-top: .5rem; font-size: 11px; font-weight: 600; color: var(--blue); }
-        .hm-hempty { margin: 0; padding: 1.25rem .875rem; text-align: center; font-size: .75rem; color: var(--soft); }
-        html:lang(km) .hm-body :is(.hm-hnav a, .hm-hsignin, .hm-hportal, .hm-hdash, .hm-hitem, .hm-hname, .hm-hempty) { line-height: 1.5; }
-        html:lang(km) .hm-body .hm-hlogo { letter-spacing: -.025em; }
-
+<x-live-layout active="home" :promotion="$promotion ?? null">
+    <x-slot:styles>
+        <style>
         /* ==================================================================
            HERO
            ================================================================== */
@@ -421,34 +263,6 @@
         .hm-live::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: #1877F2; animation: hm-pulse 2s cubic-bezier(.4, 0, .6, 1) infinite; }
         .hm-fcard .hm-clamp1 { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .hm-fcard .hm-mins { display: flex; align-items: center; gap: .25rem; font-size: 11px; color: var(--mut); }
-
-        /* ==================================================================
-           JELLY FILTER TABS (styled like the live tabs, moves like jelly)
-           ================================================================== */
-        .hm-tabs { align-self: flex-start; max-width: 100%; overflow-x: auto; padding: .375rem; border-radius: 1rem; background: var(--chip); border: 1px solid var(--line2); box-shadow: 0 1px 2px rgba(0, 0, 0, .05); scrollbar-width: none; }
-        @media (min-width: 768px) { .hm-tabs { align-self: auto; } }
-        .hm-tabs::-webkit-scrollbar { display: none; }
-        .hm-tabs--sm { padding: .25rem; }
-        .hm-tabs-track { position: relative; display: flex; width: max-content; align-items: center; gap: .25rem; }
-        .hm-tabs--sm .hm-tabs-track { gap: .375rem; }
-        .hm-tab { position: relative; z-index: 1; flex-shrink: 0; display: flex; align-items: center; justify-content: center; min-height: 40px; padding: .5rem 1rem; border: 0; border-radius: .75rem; background: transparent; font: inherit; font-size: .75rem; line-height: 1rem; font-weight: 600; white-space: nowrap; color: #475569; cursor: pointer; transition: color .3s ease; }
-        html.dark .hm-tab { color: #94A3B8; }
-        .hm-tabs--sm .hm-tab { min-height: 0; padding: .375rem .875rem; }
-        .hm-tab:hover { color: var(--strong); }
-        .hm-tab[aria-selected="true"] { color: var(--blue); }
-        html.dark .hm-tab[aria-selected="true"] { color: #4DA3FF; }
-        .hm-tab span { display: inline-block; }
-        .hm-tab span.is-pop { animation: hm-label-pop 420ms cubic-bezier(.34, 1.56, .64, 1) both; }
-        .hm-tab:focus-visible { outline: 2px solid var(--sky); outline-offset: 1px; }
-        .hm-jelly, .hm-jelly-trail { position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; }
-        .hm-jelly { transition: transform 580ms cubic-bezier(.34, 1.56, .64, 1), width 580ms cubic-bezier(.34, 1.56, .64, 1); }
-        .hm-jelly-trail { border-radius: .75rem; background: rgba(77, 163, 255, .28); filter: blur(10px); transition: transform 860ms cubic-bezier(.22, 1, .36, 1), width 860ms cubic-bezier(.22, 1, .36, 1); }
-        .hm-jelly-blob { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; border-radius: .75rem; background: var(--tab-on); box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 6px 16px -6px rgba(24, 119, 242, .35); }
-        .hm-jelly-blob::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 33%; opacity: 0; background: linear-gradient(to right, transparent, rgba(77, 163, 255, .35), transparent); }
-        .hm-jelly-blob.is-jelly { animation: hm-jelly 620ms cubic-bezier(.25, .9, .3, 1.2) both; }
-        .hm-jelly-blob.is-jelly::after { animation: hm-shimmer 720ms ease-out 120ms both; }
-        .hm-sparks i { position: absolute; left: 50%; top: 50%; margin: -3px 0 0 -3px; width: 6px; height: 6px; border-radius: 9999px; background: #9FD0FF; box-shadow: 0 0 8px #4DA3FF; animation: hm-spark 560ms ease-out 380ms both; }
-        .hm-tabs.is-static .hm-jelly, .hm-tabs.is-static .hm-jelly-trail { transition: none; }
 
         /* ==================================================================
            COURSE CARDS
@@ -698,909 +512,408 @@
         html.dark .hm-dquote { color: #E2E8F0; }
         @media (min-width: 640px) { .hm-dquote { font-size: .875rem; } }
 
-        /* ==================================================================
-           FOOTER
-           ================================================================== */
-        .hm-footer { border-top: 1px solid rgba(226, 232, 240, .8); background: #fff; transition: background-color .2s ease; }
-        html.dark .hm-footer { background: #0B0F14; border-color: #1E2530; }
-        .hm-footer-in { padding-top: 3rem; padding-bottom: 3rem; }
-        @media (min-width: 1024px) { .hm-footer-in { padding-top: 4rem; padding-bottom: 4rem; } }
-        .hm-fgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
-        @media (min-width: 768px) { .hm-fgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        @media (min-width: 1024px) { .hm-fgrid { gap: 3rem; } }
-        .hm-fcol { display: flex; flex-direction: column; align-items: flex-start; gap: .75rem; }
-        .hm-fcol--brand { gap: 1rem; }
-        .hm-wordmark { display: block; font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; letter-spacing: -.025em; color: var(--strong); }
-        .hm-wordmark span { color: var(--sky); }
-        .hm-ftext { margin: 0; font-size: .75rem; line-height: 1.625; color: #475569; }
-        html.dark .hm-ftext { color: #94A3B8; }
-        .hm-fmotto { margin: 0; font-size: .75rem; line-height: 1rem; color: #94A3B8; }
-        html.dark .hm-fmotto { color: #64748B; }
-        .hm-fhead { margin: 0; font-size: .75rem; line-height: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--strong); }
-        .hm-flinks { list-style: none; margin: 0; padding: 0; font-size: .75rem; line-height: 1rem; color: #475569; }
-        html.dark .hm-flinks { color: #94A3B8; }
-        .hm-flinks li + li { margin-top: .5rem; }
-        .hm-flinks a { color: inherit; text-decoration: none; transition: color .15s ease; }
-        .hm-flinks a:hover { color: var(--sky); }
-        .hm-fcontact { display: flex; flex-direction: column; align-items: flex-start; padding-top: .25rem; font-size: .75rem; line-height: 1rem; color: #475569; }
-        html.dark .hm-fcontact { color: #94A3B8; }
-        .hm-fcontact { gap: .375rem; }
-        .hm-fcontact .k { font-size: 11px; color: #94A3B8; }
-        .hm-fcontact .k + .k, .hm-fcontact * + .k { padding-top: .25rem; }
-        .hm-fcontact .v { color: #334155; text-decoration: none; }
-        html.dark .hm-fcontact .v { color: #CBD5E1; }
-        .hm-fcontact .v:hover { color: var(--sky); }
-        .hm-tg { display: inline-flex; align-items: center; gap: .25rem; padding: 0; border: 0; background: none; font: inherit; color: var(--sky); cursor: pointer; }
-        .hm-tg:hover { text-decoration: underline; }
-        .hm-fsocial { display: flex; align-items: center; gap: .5rem; }
-        .hm-fsocial a { color: var(--sky); text-decoration: none; }
-        .hm-fsocial a:hover { text-decoration: underline; }
-        .hm-fbar { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #F1F5F9; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 1rem; font-size: .75rem; line-height: 1rem; color: #64748B; text-align: center; }
-        html.dark .hm-fbar { border-color: #1E2530; }
-        @media (min-width: 640px) { .hm-fbar { flex-direction: row; text-align: left; } }
-        .hm-fbar p { margin: 0; }
-        .hm-fbar div { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem 1rem; font-size: 11px; }
-        .hm-fbar a { color: inherit; text-decoration: none; }
-        .hm-fbar a:hover { color: var(--sky); }
+        </style>
+    </x-slot:styles>
 
-        /* ---------- phone bottom bar (like the live site) ---------- */
-        .hm-bnav { position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; padding: .5rem .5rem max(.5rem, env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .95); backdrop-filter: blur(12px); border-top: 1px solid var(--line); }
-        html.dark .hm-bnav { background: rgba(28, 28, 30, .95); }
-        .hm-bnav > div { display: flex; align-items: center; justify-content: space-around; font-size: 10px; font-weight: 500; }
-        .hm-bnav a { display: flex; flex-direction: column; align-items: center; gap: .25rem; padding: .25rem .75rem; border-radius: .75rem; color: var(--mut); text-decoration: none; transition: color .15s ease; }
-        .hm-bnav a[aria-current="page"] { color: var(--blue); font-weight: 600; }
-        .hm-shell { padding-bottom: 4.5rem; }
-        @media (min-width: 768px) { .hm-bnav { display: none; } .hm-shell { padding-bottom: 0; } }
 
-        /* ---------- floating language / theme pill ---------- */
-        .hm-prefs { position: fixed; z-index: 40; right: 1rem; bottom: 5rem; display: flex; align-items: center; gap: .375rem; padding: .25rem; border-radius: 9999px; background: rgba(255, 255, 255, .95); backdrop-filter: blur(12px); border: 1px solid var(--line); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -4px rgba(0, 0, 0, .1); transition: all .15s ease; }
-        html.dark .hm-prefs { background: rgba(28, 28, 30, .95); }
-        @media (min-width: 640px) { .hm-prefs { right: 1.5rem; gap: .5rem; padding: .375rem; } }
-        @media (min-width: 768px) { .hm-prefs { right: 2rem; bottom: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1); } }
-        .hm-prefs form { display: flex; margin: 0; }
-        .hm-pref { display: inline-flex; align-items: center; gap: .375rem; min-height: 38px; padding: .375rem .75rem; border: 0; border-radius: 9999px; background: transparent; font: inherit; font-size: .75rem; font-weight: 600; color: var(--ink); cursor: pointer; transition: background .15s ease; }
-        .hm-pref:hover { background: #F5F7FA; }
-        html.dark .hm-pref:hover { background: #242629; }
-        .hm-pref:focus-visible { outline: 2px solid var(--sky); outline-offset: 1px; }
-        .hm-pref .l { font-size: 11px; }
-        @media (min-width: 640px) { .hm-pref .l { font-size: .75rem; } }
-        .hm-pref .m { font-weight: 500; }
-        .hm-pref-divider { width: 1px; height: 1rem; background: var(--line); }
-        .hm-flag { width: 1.125rem; height: 12px; border-radius: 2px; box-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
-        .hm-spin-in { animation: hm-icon-spin 420ms cubic-bezier(.34, 1.56, .64, 1) both; }
-
-        /* ---------- Khmer: the shared stylesheet loosens Khmer line heights and
-           removes letter spacing site-wide. The live design keeps its own
-           values in both languages, so they are put back for this page. */
-        html:lang(km) .hm-body .hm-h1 { line-height: 1.25; letter-spacing: -.025em; }
-        @media (min-width: 640px) { html:lang(km) .hm-body .hm-h1 { line-height: 1.2; } }
-        html:lang(km) .hm-body .hm-lead, html:lang(km) .hm-body .hm-tquote, html:lang(km) .hm-body .hm-cdesc, html:lang(km) .hm-body .hm-sdesc, html:lang(km) .hm-body .hm-ftext { line-height: 1.625; }
-        html:lang(km) .hm-body :is(.hm-h2, .hm-tname, .hm-show-title, .hm-ccover-title, .hm-ctitle, .hm-stitle, .hm-skills-head h4, .hm-desc, .hm-trole, .hm-canvas-sub, .hm-ccover-tools, .hm-ctools, .hm-skh, .hm-fmotto, .hm-dconcept) { line-height: 1.5; }
-        html:lang(km) .hm-body :is(.hm-label, .hm-fhead, .hm-dkicker, .hm-dright h4, .hm-skill .g) { letter-spacing: .05em; }
-        html:lang(km) .hm-body .hm-scourse { letter-spacing: .025em; }
-        html:lang(km) .hm-body :is(.hm-canvas-title, .hm-file, .hm-wordmark) { letter-spacing: -.025em; line-height: 1.2; }
-        html:lang(km) .hm-body .hm-tab, html:lang(km) .hm-body .hm-pref, html:lang(km) .hm-body .hm-dbtn { line-height: 1rem; }
-
-        /* ==================================================================
-           KEYFRAMES
-           ================================================================== */
-        @keyframes float-3d-main { 0%, 100% { transform: translateY(0) rotateX(8deg) rotateY(-10deg) scale(1); } 50% { transform: translateY(-10px) rotateX(14deg) rotateY(-4deg) scale(1.02); } }
-        @keyframes float-3d-orbit { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes float-3d-icon-a { 0%, 100% { transform: translateY(0) rotate(4deg) translateZ(20px); } 50% { transform: translateY(-8px) rotate(-3deg) translateZ(35px); } }
-        @keyframes float-3d-icon-b { 0%, 100% { transform: translateY(0) rotate(-8deg) translateZ(15px); } 50% { transform: translateY(9px) rotate(3deg) translateZ(25px); } }
-        @keyframes float-3d-icon-c { 0%, 100% { transform: translateY(0) rotate(10deg) translateZ(25px); } 50% { transform: translateY(-6px) rotate(16deg) translateZ(40px); } }
-        @keyframes pulse-glow-3d { 0%, 100% { opacity: .35; transform: scale(.92); } 50% { opacity: .75; transform: scale(1.1); } }
-        @keyframes hm-float-y { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        @keyframes hm-float-y-sm { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-        @keyframes hm-sheen { 0% { transform: translateX(-160%) skewX(-18deg); } 55%, 100% { transform: translateX(320%) skewX(-18deg); } }
-        @keyframes hm-twinkle { 0%, 100% { opacity: .15; transform: scale(.6); } 50% { opacity: 1; transform: scale(1); } }
-        @keyframes hm-shadow-breathe { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(.8); opacity: .28; } }
-        @keyframes hm-orbit-reverse { from { transform: rotateX(68deg) rotate(360deg); } to { transform: rotateX(68deg) rotate(0deg); } }
-        @keyframes hm-ring-draw { from { stroke-dasharray: 0, 100; } }
-        @keyframes hm-pulse { 50% { opacity: .5; } }
-        @keyframes hm-sun-spin { to { transform: rotate(360deg); } }
-        @keyframes hm-sun-pulse { 0%, 100% { opacity: .55; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.15); } }
-        @keyframes hm-beam { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
-        @keyframes hm-mote { 0% { transform: translateX(10px) scale(.6); opacity: 0; } 20% { opacity: 1; } 80% { opacity: .8; } 100% { transform: translateX(118px) scale(1); opacity: 0; } }
-        @keyframes hm-jelly { 0% { transform: scale(1, 1); } 20% { transform: scale(1.22, .78); } 40% { transform: scale(.88, 1.12); } 58% { transform: scale(1.07, .94); } 76% { transform: scale(.98, 1.03); } 100% { transform: scale(1, 1); } }
-        @keyframes hm-shimmer { 0% { opacity: 1; transform: translateX(-120%) skewX(-20deg); } 100% { opacity: 1; transform: translateX(340%) skewX(-20deg); } }
-        @keyframes hm-label-pop { 0% { transform: scale(1); } 40% { transform: scale(1.09); } 100% { transform: scale(1); } }
-        @keyframes hm-spark { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
-        @keyframes hm-icon-spin { from { transform: rotate(-120deg) scale(.4); opacity: 0; } to { transform: rotate(0) scale(1); opacity: 1; } }
-        @keyframes hm-pop-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
-        @keyframes hm-fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes hm-zoom-in { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
-
-        @media (prefers-reduced-motion: reduce) {
-            .hm-body *, .hm-body *::before, .hm-body *::after {
-                animation-duration: .001ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: .001ms !important;
-            }
-        }
-    </style>
-</head>
-
-@php
-    $hmKm = app()->getLocale() === 'km';
-    // Home copy in both languages, kept on this page so no shared file changes.
-    $L = fn (string $en, string $km) => $hmKm ? $km : $en;
-
-    // Lucide icons used on this page.
-    $hmIconPaths = [
-        'arrow-right' => '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
-        'arrow-up-right' => '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
-        'sparkles' => '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
-        'heart' => '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
-        'play' => '<polygon points="6 3 20 12 6 21 6 3"/>',
-        'grad' => '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
-        'check-circle' => '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
-        'chevron-right' => '<path d="m9 18 6-6-6-6"/>',
-        'award' => '<path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/>',
-        'eye' => '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
-        'share' => '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>',
-        'check' => '<path d="M20 6 9 17l-5-5"/>',
-        'x' => '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
-        'clock' => '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
-        'chart' => '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
-        'house' => '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
-        'book' => '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
-        'folder' => '<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
-        'user' => '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
-        'moon' => '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
-        'bell' => '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',
-        'shield' => '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
-        'logout' => '<path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>',
-        'settings' => '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
-        'sun' => '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
-    ];
-    $icon = fn (string $name, string $class = 'i4') => '<svg class="'.$class.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'.$hmIconPaths[$name].'</svg>';
-    $blank = '<svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><circle cx="32" cy="23" r="12.5"/><path d="M7 64c0-14.5 11.2-25 25-25s25 10.5 25 25z"/></svg>';
-
-    // ---------- courses: real courses, shown with the live card design ----------
-    $hmPhotos = [
-        'ps' => 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80',
-        'ai' => 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-        'id' => 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
-        'gd' => 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=800&auto=format&fit=crop&q=80',
-        'ux' => 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80',
-        'mo' => 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80',
-    ];
-    // course mark => [software chips, software line, photo, filter group]
-    $hmSoftware = [
-        'ps' => [['Ps'], 'Photoshop', 'ps', 'Graphic Design'],
-        'ai' => [['Ai'], 'Illustrator', 'ai', 'Graphic Design'],
-        'id' => [['Id'], 'InDesign', 'id', 'Graphic Design'],
-        'gd' => [['Ps', 'Ai', 'Id'], 'Photoshop + Illustrator + InDesign', 'gd', 'Graphic Design'],
-        'fg' => [['Fg'], 'Figma', 'ux', 'UX/UI Design'],
-        'xd' => [['Xd'], 'Adobe XD', 'ux', 'UX/UI Design'],
-        'ae' => [['Ae'], 'After Effects', 'mo', 'Motion Graphics'],
-        'pr' => [['Pr'], 'Premiere Pro', 'mo', 'Motion Graphics'],
-    ];
-    $hmGroupOf = function (string $category): string {
-        $c = strtolower($category);
-        if (preg_match('/ux|ui|figma|xd|web|app/', $c)) return 'UX/UI Design';
-        if (preg_match('/motion|after effects|animation|video|premiere/', $c)) return 'Motion Graphics';
-        return 'Graphic Design';
-    };
-
-    $hmUser = auth()->user();
-    $hmUser?->loadMissing('enrollments');
-
-    $hmCards = collect($courses ?? [])->values()->map(function ($course) use ($hmSoftware, $hmPhotos, $hmGroupOf, $hmUser, $L) {
-        $mark = trim((string) $course->mark);
-        $sw = $hmSoftware[strtolower($mark)] ?? null;
-        $category = (string) $course->category;
-        $minutes = $course->durationMinutes();
-        $enrollment = $hmUser?->enrollmentFor($course);
-        $lesson = $enrollment?->continueLesson();
-        $description = trim(strip_tags((string) $course->localized('description'))) ?: trim((string) $course->localized('subtitle'));
-
-        return [
-            'course' => $course,
-            'title' => $course->localized('title'),
-            'chips' => $sw[0] ?? array_values(array_filter([$mark])),
-            'tools' => $sw[1] ?? ($category ?: 'Design'),
-            'photo' => $course->thumbnailSrc() ?: $hmPhotos[$sw[2] ?? 'gd'],
-            'group' => $sw[3] ?? $hmGroupOf($category),
-            'category' => $category,
-            'description' => \Illuminate\Support\Str::limit($description, 240),
-            'level' => $course->level ? __($course->level) : '',
-            'duration' => $minutes > 0 ? $course->formattedDuration() : '',
-            'lessons' => (int) $course->lessons_count,
-            'enrolled' => $enrollment !== null,
-            'progress' => $enrollment ? $course->progressPercent($hmUser) : 0,
-            'continue' => ($lesson && filled($lesson->getRouteKey())) ? route('courses.lessons.show', [$course, $lesson]) : route('courses.show', $course),
-            'url' => route('courses.show', $course),
-        ];
-    });
-    $hmGroups = ['Graphic Design', 'UX/UI Design', 'Motion Graphics'];
-
-    // ---------- teacher ----------
-    $hmSkills = [
-        ['🎨', 'រចនាក្រាហ្វិក និង Branding', 'Branding'],
-        ['🎬', 'Motion Graphics & Animation', 'Motion'],
-        ['🖥️', 'UI/UX Design & Figma', 'UI/UX'],
-        ['📱', 'Social Media Design', 'Social Media'],
-        ['📦', 'Packaging & Product Design', 'Packaging'],
-        ['🎥', 'Video & Visual Content', 'Production'],
-        ['🤖', 'AI for Design & Creative Workflow', 'AI Design'],
-        ['👨‍🏫', 'បង្រៀន Graphic Design និង Motion Design', 'Teaching'],
-        ['💡', 'Design Thinking & Creative Direction', 'Strategy'],
-        ['💻', 'Adobe Photoshop, Illustrator, InDesign & After Effects', 'Software'],
-    ];
-
-    // ---------- student showcase (same projects as the live site) ----------
-    $hmProjects = [
-        ['id' => 'sw-1', 'studentName' => 'Dara Somnang', 'studentNameKh' => 'ដារ៉ា សំណាង', 'studentAvatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', 'course' => 'Graphic Design', 'title' => 'Angkor Heritage Minimalist Identity', 'titleKh' => 'ប្រព័ន្ធអត្តសញ្ញាណបេតិកភណ្ឌអង្គរ', 'image' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80', 'likes' => 142, 'badge' => "Teacher's Choice", 'tools' => ['Illustrator', 'InDesign', 'Photoshop'], 'grade' => '9.8 / 10', 'description' => 'A modern minimalist brand identity and packaging system celebrating classical Angkorian architectural proportions and traditional Khmer stone carvings.', 'teacherCritique' => 'Outstanding optical balance between the modern sans-serif type and traditional Khmer display font. Grid proportion is exemplary.'],
-        ['id' => 'sw-2', 'studentName' => 'Bopha Vann', 'studentNameKh' => 'វណ្ណ បុប្ផា', 'studentAvatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80', 'course' => 'UX/UI Design', 'title' => 'Phnom Penh Urban Transit UI Kit', 'titleKh' => 'កម្មវិធី និង UI Kit ធ្វើដំណើររាជធានីភ្នំពេញ', 'image' => 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80', 'likes' => 198, 'badge' => 'Featured Project', 'tools' => ['Figma', 'FigJam', 'Protopie'], 'grade' => '9.6 / 10', 'description' => 'Clean mobile ticketing and real-time bus navigation application designed for Phnom Penh commuters with full Khmer localized typography and dark mode support.', 'teacherCritique' => 'Superb design token structure and auto-layout discipline. Micro-interactions for route tracking are smooth and intuitive.'],
-        ['id' => 'sw-3', 'studentName' => 'Rithy Kem', 'studentNameKh' => 'កែម រិទ្ធី', 'studentAvatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80', 'course' => 'Motion Graphics', 'title' => 'Kinetic Khmer Calligraphy Showreel', 'titleKh' => 'ចលនាអក្សរឆ្លាក់ខ្មែរ Kinetic Calligraphy', 'image' => 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80', 'likes' => 215, 'badge' => 'Top Honors', 'tools' => ['After Effects', 'Cinema 4D', 'Illustrator'], 'grade' => '9.9 / 10', 'description' => 'Dynamic 3D typography motion reel exploring traditional Khmer calligraphy morphing into contemporary geometric spatial forms with fluid rhythm.', 'teacherCritique' => 'Masterful easing curves and secondary overshoot physics. Setting a new benchmark for motion typography in Cambodia.'],
-        ['id' => 'sw-4', 'studentName' => 'Channary Pich', 'studentNameKh' => 'ពេជ្រ ចាន់ណារី', 'studentAvatar' => 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80', 'course' => 'Graphic Design', 'title' => 'Mondulkiri Specialty Coffee Packaging', 'titleKh' => 'ការរចនាវេចខ្ចប់កាហ្វេពិសេសមណ្ឌលគិរី', 'image' => 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80', 'likes' => 167, 'badge' => 'Best Packaging', 'tools' => ['Illustrator', 'Dimension', 'Photoshop'], 'grade' => '9.5 / 10', 'description' => 'Eco-conscious craft paper packaging featuring indigenous botanical motifs and bespoke dual-script roast profile typographic labels.', 'teacherCritique' => 'The tactile texture choice and color palette evoke the authentic highland soil. Highly commercial and shelf-ready.'],
-        ['id' => 'sw-5', 'studentName' => 'Sothea Chan', 'studentNameKh' => 'ចាន់ សុធា', 'studentAvatar' => 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80', 'course' => 'UX/UI Design', 'title' => 'Siem Reap Heritage AR Tourism Guide', 'titleKh' => 'កម្មវិធីណែនាំទេសចរណ៍ AR សៀមរាប', 'image' => 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=80', 'likes' => 184, 'badge' => 'Best Prototype', 'tools' => ['Figma', 'Blender', 'Spline'], 'grade' => '9.7 / 10', 'description' => 'Immersive augmented reality museum and temple navigation experience with multilingual audio tours and interactive 3D artifact inspect.', 'teacherCritique' => 'Impeccable accessibility contrast and spatial UX. The card navigation gestures feel natural on one-handed mobile devices.'],
-        ['id' => 'sw-6', 'studentName' => 'Visal Mao', 'studentNameKh' => 'ម៉ៅ វិសាល', 'studentAvatar' => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80', 'course' => 'Motion Graphics', 'title' => 'Apsara Cyberpunk Kinetic Poster', 'titleKh' => 'Poster ចលនាកូនកាត់ Apsara Cyberpunk', 'image' => 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80', 'likes' => 243, 'badge' => 'Best Visual FX', 'tools' => ['After Effects', 'Blender', 'Octane'], 'grade' => '9.9 / 10', 'description' => 'Futuristic animated poster series merging classical Cambodian classical dance hand postures with neon holographic particle simulations.', 'teacherCritique' => 'Stunning artistic vision and audio-visual synchronization. Exemplifies how traditional Cambodian art can evolve into the digital era.'],
-    ];
-    // liked when the page first loads, as on the live site
-    $hmDefaultLiked = ['sw-1', 'sw-3'];
-
-    $hmStartUrl = auth()->check() ? route('learning.index') : route('register');
-
-    // Words the page script shows.
-    $hmText = [
-        'copied' => 'Copied Link!',
-        'share' => 'Share',
-        'saveWish' => $L('Save to Wishlist', 'រក្សាទុកក្នុងបញ្ជីចង់រៀន'),
-        'removeWish' => $L('Remove from Wishlist', 'ដកចេញពីបញ្ជីចង់រៀន'),
-    ];
-@endphp
-
-<body class="antialiased hm-body">
-
-    <div class="hm-shell"
-        x-data="{
-            dark: document.documentElement.classList.contains('dark'),
-            announce: '',
-
-            toggleTheme(e) {
-                const next = !this.dark;
-                const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-                /* Where the wipe starts: the button you actually clicked. */
-                const x = (e && e.clientX) ? e.clientX : window.innerWidth - 60;
-                const y = (e && e.clientY) ? e.clientY : 50;
-
-                if (!reduce) {
-                    const r = Math.hypot(
-                        Math.max(x, window.innerWidth - x),
-                        Math.max(y, window.innerHeight - y)
-                    ) * 2.2;
-
-                    const ripple = document.createElement('span');
-                    ripple.className = 'theme-ripple';
-                    ripple.style.left = x + 'px';
-                    ripple.style.top = y + 'px';
-                    ripple.style.setProperty('--r', r + 'px');
-                    ripple.style.background = next ? '#0B0B0D' : '#F5F7FA';
-                    document.body.appendChild(ripple);
-                    setTimeout(() => ripple.remove(), 700);
-                }
-
-                setTimeout(() => {
-                    this.dark = next;
-                    document.documentElement.classList.toggle('dark', next);
-                    localStorage.setItem('pd-theme', next ? 'dark' : 'light');
-                }, reduce ? 0 : 180);
-
-                this.announce = next ? 'Dark mode enabled' : 'Light mode enabled';
-                setTimeout(() => { this.announce = ''; }, 2000);
-            }
-        }">
-
-        {{-- Screen readers still hear the mode change --}}
-        <div class="hm-sr" role="status" aria-live="polite" x-text="announce"></div>
-
-        {{-- The live promotion sits above the top bar. --}}
-        @include('partials._promo')
-
-        {{-- Top bar from the live design (this page only; every other page keeps the shared bar). --}}
-        <header id="site-nav" class="hm-header">
-            <div class="hm-hbar">
-                <a href="{{ route('home') }}" class="hm-hlogo" aria-label="piseth.design home">piseth<span>.design</span></a>
-
-                <nav class="hm-hnav" aria-label="{{ $L('Main', 'ម៉ឺនុយ') }}">
-                    <a href="{{ route('home') }}" aria-current="page" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Home', 'ទំព័រដើម') }}</a>
-                    <a href="{{ route('courses') }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Courses', 'វគ្គសិក្សា') }}</a>
-                    <a href="{{ route('courses', ['free' => 1]) }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Resources', 'ឯកសារ') }}</a>
-                    <a href="{{ route('about') }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('About', 'អំពីលោកគ្រូ') }}</a>
-                </nav>
-
-                <div class="hm-hright" x-data="{ bell: false, acct: false }" @click.outside="bell = false; acct = false" @keydown.escape.window="bell = false; acct = false">
-                    <button type="button" class="hm-hbell" @click="bell = !bell; acct = false" :aria-expanded="bell.toString()" aria-expanded="false" aria-haspopup="true" aria-label="Notifications" title="Notification Center">
-                        {!! $icon('bell') !!}
-                        @if ($promotion ?? null)
-                            <span class="dot" aria-hidden="true"></span>
-                        @endif
-                    </button>
-                    <div class="hm-hpanel hm-hpanel--bell" x-show="bell" x-cloak>
-                        <div class="hm-hpanel-head hm-hbrand">
-                            <img src="{{ asset('images/logo-mark-96.png') }}" alt="" width="24" height="24">
-                            <div style="min-width:0">
-                                <p class="hm-hname {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Notifications', 'ការជូនដំណឹង') }}</p>
-                                <p class="hm-hmail">piseth.design</p>
-                            </div>
-                        </div>
-                        @if ($promotion ?? null)
-                            <a href="{{ $promotion->ctaUrl() }}" class="hm-hnote">
-                                <span class="pill">{{ $promotion->isDiscount() ? __(':percent% off', ['percent' => $promotion->discount_percent]) : __('News') }}</span>
-                                <span class="t">{{ $promotion->localized('title') }}</span>
-                                @if (filled($promotion->localized('message')))
-                                    <span class="m">{{ $promotion->localized('message') }}</span>
-                                @endif
-                                <span class="go">{{ $promotion->ctaLabel() }} {!! $icon('arrow-right', 'i3') !!}</span>
-                            </a>
-                        @else
-                            <p class="hm-hempty {{ $hmKm ? 'hm-km' : '' }}">{{ $L("You're all caught up.", 'មិនមានការជូនដំណឹងថ្មីទេ។') }}</p>
-                        @endif
+        {{-- ============================== HERO ============================== --}}
+        <section class="hm-hero" aria-labelledby="hm-hero-title">
+            <div class="hm-wrap hm-hero-grid">
+                <div class="hm-hero-copy">
+                    <div class="hm-status">
+                        <span class="hm-dot" aria-hidden="true"></span>
+                        <span>Modern Cambodian Design Academy</span>
+                        <span class="hm-status-sep" aria-hidden="true">·</span>
+                        <span class="hm-status-by hm-km">{{ $L('Led by Lecturer Piseth Yoeurn', 'បង្រៀនដោយលោកគ្រូ ពិសិដ្ឋ') }}</span>
                     </div>
 
-                    @auth
-                        <button type="button" class="hm-havatar" @click="acct = !acct; bell = false" :aria-expanded="acct.toString()" aria-expanded="false" aria-haspopup="true" aria-label="User profile menu">
-                            <x-user-avatar :user="$hmUser" :size="32" />
-                        </button>
-                        <div class="hm-hpanel" x-show="acct" x-cloak>
-                            <div class="hm-hpanel-head">
-                                <div class="hm-hrow">
-                                    <p class="hm-hname">{{ $hmUser->name }}</p>
-                                    <span class="hm-hrole {{ $hmUser->isAdmin() ? 'hm-hrole--teacher' : '' }}">{{ $hmUser->isAdmin() ? 'Teacher' : 'Student' }}</span>
-                                </div>
-                                <p class="hm-hmail">{{ $hmUser->email }}</p>
-                            </div>
-                            <div class="hm-hmenu">
-                                @if ($hmUser->isAdmin())
-                                    <a href="{{ route('admin.dashboard') }}" class="hm-hitem hm-hitem--accent">{!! $icon('shield', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Teacher Admin Portal', 'ផ្ទាំងគ្រប់គ្រងគ្រូបង្រៀន') }}</span></a>
-                                @endif
-                                <a href="{{ route('learning.index') }}" class="hm-hitem">{!! $icon('book', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Dashboard', 'ផ្ទាំងសិក្សារបស់ខ្ញុំ') }}</span></a>
-                                <a href="{{ route('learning.profile') }}" class="hm-hitem">{!! $icon('user', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Student Profile', 'គណនីនិស្សិត') }}</span></a>
-                                <a href="{{ route('profile.edit') }}" class="hm-hitem">{!! $icon('settings', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ __('Account settings') }}</span></a>
-                                <div class="hm-hsep">
-                                    <form method="POST" action="{{ route('locale') }}">
-                                        @csrf
-                                        <input type="hidden" name="locale" value="{{ $hmKm ? 'en' : 'km' }}">
-                                        <button type="submit" class="hm-hitem hm-hitem--split">
-                                            <span><span aria-hidden="true">{{ $hmKm ? '🇰🇭' : '🇬🇧' }}</span><span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Language: English (EN)', 'ភាសា: ខ្មែរ (KM)') }}</span></span>
-                                            <span class="hint {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Switch KM', 'ប្តូរជា EN') }}</span>
-                                        </button>
-                                    </form>
-                                    <button type="button" class="hm-hitem hm-hitem--split" @click="toggleTheme($event)">
-                                        <span>
-                                            <span style="display:flex; color:#4DA3FF" x-show="dark">{!! $icon('moon', 'i35') !!}</span>
-                                            <span style="display:flex; color:#F59E0B" x-show="!dark" x-cloak>{!! $icon('sun', 'i35') !!}</span>
-                                            <span class="{{ $hmKm ? 'hm-km' : '' }}" x-text="dark ? @js($L('Appearance: Dark Mode', 'ទម្រង់ពន្លឺ: ងងឹត (Dark)')) : @js($L('Appearance: Light Mode', 'ទម្រង់ពន្លឺ: ភ្លឺ (Light)'))"></span>
+                    <h1 id="hm-hero-title" class="hm-h1 {{ $hmKm ? 'hm-km' : '' }}">
+                        {{ $L('Master Design Fundamentals.', 'រៀន Design ឲ្យច្បាស់') }}<br>
+                        <span>{{ $L('Craft Valuable Creations.', 'បង្កើតស្នាដៃឲ្យមានតម្លៃ។') }}</span>
+                    </h1>
+
+                    <p class="hm-lead {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Learn Graphic Design, UX/UI, Motion Graphics, and studio creative workflows through hands-on practice led by university lecturer Piseth Yoeurn.', 'រៀន Graphic Design, UX/UI, Motion Graphics និងជំនាញ Creative ដោយផ្តោតលើការអនុវត្តជាក់ស្តែង ជាមួយសាស្ត្រាចារ្យ យឿន ពិសិដ្ឋ។') }}</p>
+
+                    <div class="hm-ctas">
+                        <a href="{{ $hmStartUrl }}" class="hm-btn hm-btn-primary">
+                            <span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Start Learning', 'ចាប់ផ្ដើមរៀន') }}</span>
+                            {!! $icon('arrow-right') !!}
+                        </a>
+                        <a href="{{ route('courses') }}" class="hm-btn hm-btn-ghost"><span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Explore Courses', 'មើលវគ្គសិក្សា') }}</span></a>
+                    </div>
+                </div>
+
+                {{-- macOS-style design window with the 3D studio scene --}}
+                <div>
+                    <div class="hm-art">
+                        <div class="hm-glow hm-glow-a" aria-hidden="true"></div>
+                        <div class="hm-glow hm-glow-b" aria-hidden="true"></div>
+
+                        <div class="hm-art-inner">
+                            <div class="hm-floats" aria-hidden="true">
+                                <div class="hm-float hm-float-progress">
+                                    <div class="hm-fcard">
+                                        <span class="hm-ring">
+                                            <svg viewBox="0 0 36 36"><path class="track" stroke-width="3.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path class="bar" stroke-dasharray="78, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg>
+                                            <b>78%</b>
                                         </span>
-                                        <span class="hint hint--mono hm-mono">Toggle</span>
-                                    </button>
-                                    <form method="POST" action="{{ route('logout') }}">
-                                        @csrf
-                                        <button type="submit" class="hm-hitem hm-hitem--danger">{!! $icon('logout', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Log Out', 'ចាកចេញពីគណនី') }}</span></button>
-                                    </form>
+                                        <span><small>Overall Progress</small><strong>Design Course</strong></span>
+                                    </div>
+                                </div>
+                                <div class="hm-float hm-float-cert">
+                                    <div class="hm-fcard hm-fcard-cert">
+                                        <span style="color:var(--blue)">{!! $icon('award', 'i35') !!}</span>
+                                        <strong>Design Course Certified</strong>
+                                        <span style="color:#10B981">{!! $icon('check-circle', 'i35') !!}</span>
+                                    </div>
+                                </div>
+                                <div class="hm-float hm-float-project">
+                                    <div class="hm-fcard hm-fcard-project">
+                                        <span class="hm-no1">#01</span>
+                                        <span><strong>Design Course Project</strong><span class="hm-amber">Teacher Feedback Received</span></span>
+                                    </div>
+                                </div>
+                                <div class="hm-float hm-float-learning">
+                                    <div class="hm-fcard">
+                                        <span class="hm-play"><svg class="i4" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="margin-left:2px"><polygon points="6 3 20 12 6 21 6 3" /></svg></span>
+                                        <span style="padding-right:.25rem">
+                                            <span class="hm-live">Currently Learning</span>
+                                            <strong class="hm-clamp1">Design Course: Visual Mastery</strong>
+                                            <span class="hm-mins">{!! $icon('clock', 'i3') !!} 38 mins remaining</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="hm-window">
+                                <div class="hm-titlebar">
+                                    <div class="hm-tb-left">
+                                        <i style="background:#FF5F56"></i><i style="background:#FFBD2E"></i><i style="background:#27C93F"></i>
+                                        <span class="hm-file hm-mono">design_course_curriculum.fig</span>
+                                    </div>
+                                    <div class="hm-badge">{!! $icon('sparkles', 'i3') !!}<span>Design Course</span></div>
+                                </div>
+
+                                <div class="hm-canvas-pad">
+                                    <a href="{{ route('courses') }}" class="hm-canvas" aria-label="Open Design Course">
+                                        <div class="hm-grid-lines" aria-hidden="true"></div>
+                                        <div class="hm-canvas-row">
+                                            <div class="hm-canvas-copy">
+                                                <span class="hm-canvas-title">Design Course</span>
+                                                <p class="hm-canvas-sub">Graphic Design · UX/UI · Motion Graphics</p>
+                                                <div class="hm-tags">
+                                                    <span class="hm-tag hm-tag-b hm-mono">Adobe Photoshop</span>
+                                                    <span class="hm-tag hm-tag-a hm-mono">Adobe Illustrator</span>
+                                                    <span class="hm-tag hm-tag-p hm-mono">UX/UI Design · Figma</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="hm-stage" aria-hidden="true">
+                                                <div class="hm-stage-glow"></div>
+                                                <span class="hm-star" style="top:12%; left:18%"></span>
+                                                <span class="hm-star" style="top:22%; right:14%; animation-delay:.9s"></span>
+                                                <span class="hm-star" style="bottom:18%; left:10%; animation-delay:1.6s"></span>
+                                                <span class="hm-star" style="bottom:10%; right:24%; animation-delay:.4s"></span>
+                                                <span class="hm-star" style="top:48%; right:6%; animation-delay:2.2s"></span>
+                                                <div class="hm-ring-tilt"><i></i></div>
+                                                <div class="hm-orbit"><i></i></div>
+
+                                                <div class="hm-scene">
+                                                    <div class="hm-cube-shadow"></div>
+                                                    <div class="hm-cube">
+                                                        <div class="hm-cube-grid"></div>
+                                                        {{-- light from the sun tile, kept inside the cube --}}
+                                                        <div class="hm-cube-hit"></div>
+                                                        <div class="hm-cube-beam"></div>
+                                                        <div class="hm-cube-motes"><i style="top:-10px"></i><i style="top:-2px; animation-delay:.9s"></i><i style="top:6px; animation-delay:1.8s"></i></div>
+                                                        <div class="hm-cube-sheen"></div>
+                                                        <div class="hm-cube-face">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                                                <defs><linearGradient id="hmPenGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38BDF8" /><stop offset="50%" stop-color="#818CF8" /><stop offset="100%" stop-color="#1877F2" /></linearGradient></defs>
+                                                                <path d="m12 19 7-7 3 3-7 7-3-3z" stroke="url(#hmPenGrad)" fill="url(#hmPenGrad)" fill-opacity=".25" />
+                                                                <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" stroke="url(#hmPenGrad)" />
+                                                                <path d="m2 2 7.586 7.586" stroke="#FFFFFF" />
+                                                                <circle cx="11" cy="11" r="2" fill="#38BDF8" />
+                                                            </svg>
+                                                            <span class="hm-mono">3D Studio</span>
+                                                        </div>
+                                                        <div class="hm-cube-corner"></div>
+                                                    </div>
+
+                                                    {{-- the yellow tile is a small sun lighting the cube --}}
+                                                    <div class="hm-sat hm-sat-sun">
+                                                        <span class="hm-sun-rays"></span>
+                                                        <span class="hm-sun-halo"></span>
+                                                        <div class="hm-tile hm-tile-sun">✦</div>
+                                                    </div>
+                                                    <div class="hm-sat hm-sat-figma">
+                                                        <div class="hm-tile hm-tile-figma">
+                                                            <svg viewBox="0 0 38 57" width="20" height="28"><path fill="#1ABCFE" d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z" /><path fill="#0ACF83" d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z" /><path fill="#FF7262" d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z" /><path fill="#F24E1E" d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z" /><path fill="#A259FF" d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z" /></svg>
+                                                        </div>
+                                                    </div>
+                                                    <div class="hm-sat hm-sat-ps"><div class="hm-tile hm-tile-ps"><span>Ps</span></div></div>
+                                                    <div class="hm-sat hm-sat-ai"><div class="hm-tile hm-tile-ai"><span>Ai</span></div></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="hm-canvas-foot"><span>Open Design Course {!! $icon('arrow-up-right', 'i35') !!}</span></div>
+                                    </a>
+                                </div>
+
+                                <div class="hm-wfoot">
+                                    <div class="hm-wfoot-l">
+                                        <span class="hm-py">PY</span>
+                                        <span class="hm-wfoot-t">Instructor: <strong>Piseth Yoeurn</strong></span>
+                                    </div>
+                                    <a href="{{ route('courses') }}" class="hm-wfoot-link">Design Course Curriculum →</a>
                                 </div>
                             </div>
                         </div>
-
-                        @if ($hmUser->isAdmin())
-                            <a href="{{ route('admin.dashboard') }}" class="hm-hportal" title="Open Teacher / Admin Portal">{!! $icon('shield', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Teacher Portal', 'ផ្ទាំងគ្រូបង្រៀន') }}</span></a>
-                        @else
-                            <a href="{{ route('learning.index') }}" class="hm-hdash" title="Open Student Dashboard">{!! $icon('book', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Dashboard', 'ផ្ទាំងសិក្សា') }}</span></a>
-                        @endif
-                    @else
-                        <a href="{{ route('login') }}" class="hm-hsignin">{!! $icon('user', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Sign In', 'ចូលរៀន') }}</span></a>
-                        <a href="{{ route('admin.dashboard') }}" class="hm-hportal" title="Open Teacher / Admin Portal"><span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Teacher Portal', 'ផ្ទាំងគ្រូបង្រៀន') }}</span></a>
-                    @endauth
+                    </div>
                 </div>
             </div>
-        </header>
+        </section>
 
-        <main class="hm-main">
-
-            {{-- ============================== HERO ============================== --}}
-            <section class="hm-hero" aria-labelledby="hm-hero-title">
-                <div class="hm-wrap hm-hero-grid">
-                    <div class="hm-hero-copy">
-                        <div class="hm-status">
-                            <span class="hm-dot" aria-hidden="true"></span>
-                            <span>Modern Cambodian Design Academy</span>
-                            <span class="hm-status-sep" aria-hidden="true">·</span>
-                            <span class="hm-status-by hm-km">{{ $L('Led by Lecturer Piseth Yoeurn', 'បង្រៀនដោយលោកគ្រូ ពិសិដ្ឋ') }}</span>
-                        </div>
-
-                        <h1 id="hm-hero-title" class="hm-h1 {{ $hmKm ? 'hm-km' : '' }}">
-                            {{ $L('Master Design Fundamentals.', 'រៀន Design ឲ្យច្បាស់') }}<br>
-                            <span>{{ $L('Craft Valuable Creations.', 'បង្កើតស្នាដៃឲ្យមានតម្លៃ។') }}</span>
-                        </h1>
-
-                        <p class="hm-lead {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Learn Graphic Design, UX/UI, Motion Graphics, and studio creative workflows through hands-on practice led by university lecturer Piseth Yoeurn.', 'រៀន Graphic Design, UX/UI, Motion Graphics និងជំនាញ Creative ដោយផ្តោតលើការអនុវត្តជាក់ស្តែង ជាមួយសាស្ត្រាចារ្យ យឿន ពិសិដ្ឋ។') }}</p>
-
-                        <div class="hm-ctas">
-                            <a href="{{ $hmStartUrl }}" class="hm-btn hm-btn-primary">
-                                <span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Start Learning', 'ចាប់ផ្ដើមរៀន') }}</span>
-                                {!! $icon('arrow-right') !!}
-                            </a>
-                            <a href="{{ route('courses') }}" class="hm-btn hm-btn-ghost"><span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Explore Courses', 'មើលវគ្គសិក្សា') }}</span></a>
-                        </div>
-                    </div>
-
-                    {{-- macOS-style design window with the 3D studio scene --}}
-                    <div>
-                        <div class="hm-art">
-                            <div class="hm-glow hm-glow-a" aria-hidden="true"></div>
-                            <div class="hm-glow hm-glow-b" aria-hidden="true"></div>
-
-                            <div class="hm-art-inner">
-                                <div class="hm-floats" aria-hidden="true">
-                                    <div class="hm-float hm-float-progress">
-                                        <div class="hm-fcard">
-                                            <span class="hm-ring">
-                                                <svg viewBox="0 0 36 36"><path class="track" stroke-width="3.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path class="bar" stroke-dasharray="78, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg>
-                                                <b>78%</b>
-                                            </span>
-                                            <span><small>Overall Progress</small><strong>Design Course</strong></span>
-                                        </div>
-                                    </div>
-                                    <div class="hm-float hm-float-cert">
-                                        <div class="hm-fcard hm-fcard-cert">
-                                            <span style="color:var(--blue)">{!! $icon('award', 'i35') !!}</span>
-                                            <strong>Design Course Certified</strong>
-                                            <span style="color:#10B981">{!! $icon('check-circle', 'i35') !!}</span>
-                                        </div>
-                                    </div>
-                                    <div class="hm-float hm-float-project">
-                                        <div class="hm-fcard hm-fcard-project">
-                                            <span class="hm-no1">#01</span>
-                                            <span><strong>Design Course Project</strong><span class="hm-amber">Teacher Feedback Received</span></span>
-                                        </div>
-                                    </div>
-                                    <div class="hm-float hm-float-learning">
-                                        <div class="hm-fcard">
-                                            <span class="hm-play"><svg class="i4" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="margin-left:2px"><polygon points="6 3 20 12 6 21 6 3" /></svg></span>
-                                            <span style="padding-right:.25rem">
-                                                <span class="hm-live">Currently Learning</span>
-                                                <strong class="hm-clamp1">Design Course: Visual Mastery</strong>
-                                                <span class="hm-mins">{!! $icon('clock', 'i3') !!} 38 mins remaining</span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="hm-window">
-                                    <div class="hm-titlebar">
-                                        <div class="hm-tb-left">
-                                            <i style="background:#FF5F56"></i><i style="background:#FFBD2E"></i><i style="background:#27C93F"></i>
-                                            <span class="hm-file hm-mono">design_course_curriculum.fig</span>
-                                        </div>
-                                        <div class="hm-badge">{!! $icon('sparkles', 'i3') !!}<span>Design Course</span></div>
-                                    </div>
-
-                                    <div class="hm-canvas-pad">
-                                        <a href="{{ route('courses') }}" class="hm-canvas" aria-label="Open Design Course">
-                                            <div class="hm-grid-lines" aria-hidden="true"></div>
-                                            <div class="hm-canvas-row">
-                                                <div class="hm-canvas-copy">
-                                                    <span class="hm-canvas-title">Design Course</span>
-                                                    <p class="hm-canvas-sub">Graphic Design · UX/UI · Motion Graphics</p>
-                                                    <div class="hm-tags">
-                                                        <span class="hm-tag hm-tag-b hm-mono">Adobe Photoshop</span>
-                                                        <span class="hm-tag hm-tag-a hm-mono">Adobe Illustrator</span>
-                                                        <span class="hm-tag hm-tag-p hm-mono">UX/UI Design · Figma</span>
-                                                    </div>
-                                                </div>
-
-                                                <div class="hm-stage" aria-hidden="true">
-                                                    <div class="hm-stage-glow"></div>
-                                                    <span class="hm-star" style="top:12%; left:18%"></span>
-                                                    <span class="hm-star" style="top:22%; right:14%; animation-delay:.9s"></span>
-                                                    <span class="hm-star" style="bottom:18%; left:10%; animation-delay:1.6s"></span>
-                                                    <span class="hm-star" style="bottom:10%; right:24%; animation-delay:.4s"></span>
-                                                    <span class="hm-star" style="top:48%; right:6%; animation-delay:2.2s"></span>
-                                                    <div class="hm-ring-tilt"><i></i></div>
-                                                    <div class="hm-orbit"><i></i></div>
-
-                                                    <div class="hm-scene">
-                                                        <div class="hm-cube-shadow"></div>
-                                                        <div class="hm-cube">
-                                                            <div class="hm-cube-grid"></div>
-                                                            {{-- light from the sun tile, kept inside the cube --}}
-                                                            <div class="hm-cube-hit"></div>
-                                                            <div class="hm-cube-beam"></div>
-                                                            <div class="hm-cube-motes"><i style="top:-10px"></i><i style="top:-2px; animation-delay:.9s"></i><i style="top:6px; animation-delay:1.8s"></i></div>
-                                                            <div class="hm-cube-sheen"></div>
-                                                            <div class="hm-cube-face">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                                                                    <defs><linearGradient id="hmPenGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38BDF8" /><stop offset="50%" stop-color="#818CF8" /><stop offset="100%" stop-color="#1877F2" /></linearGradient></defs>
-                                                                    <path d="m12 19 7-7 3 3-7 7-3-3z" stroke="url(#hmPenGrad)" fill="url(#hmPenGrad)" fill-opacity=".25" />
-                                                                    <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" stroke="url(#hmPenGrad)" />
-                                                                    <path d="m2 2 7.586 7.586" stroke="#FFFFFF" />
-                                                                    <circle cx="11" cy="11" r="2" fill="#38BDF8" />
-                                                                </svg>
-                                                                <span class="hm-mono">3D Studio</span>
-                                                            </div>
-                                                            <div class="hm-cube-corner"></div>
-                                                        </div>
-
-                                                        {{-- the yellow tile is a small sun lighting the cube --}}
-                                                        <div class="hm-sat hm-sat-sun">
-                                                            <span class="hm-sun-rays"></span>
-                                                            <span class="hm-sun-halo"></span>
-                                                            <div class="hm-tile hm-tile-sun">✦</div>
-                                                        </div>
-                                                        <div class="hm-sat hm-sat-figma">
-                                                            <div class="hm-tile hm-tile-figma">
-                                                                <svg viewBox="0 0 38 57" width="20" height="28"><path fill="#1ABCFE" d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z" /><path fill="#0ACF83" d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z" /><path fill="#FF7262" d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z" /><path fill="#F24E1E" d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z" /><path fill="#A259FF" d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z" /></svg>
-                                                            </div>
-                                                        </div>
-                                                        <div class="hm-sat hm-sat-ps"><div class="hm-tile hm-tile-ps"><span>Ps</span></div></div>
-                                                        <div class="hm-sat hm-sat-ai"><div class="hm-tile hm-tile-ai"><span>Ai</span></div></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="hm-canvas-foot"><span>Open Design Course {!! $icon('arrow-up-right', 'i35') !!}</span></div>
-                                        </a>
-                                    </div>
-
-                                    <div class="hm-wfoot">
-                                        <div class="hm-wfoot-l">
-                                            <span class="hm-py">PY</span>
-                                            <span class="hm-wfoot-t">Instructor: <strong>Piseth Yoeurn</strong></span>
-                                        </div>
-                                        <a href="{{ route('courses') }}" class="hm-wfoot-link">Design Course Curriculum →</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        {{-- ============================== COURSES (real courses from the database) ============================== --}}
+        <section id="hm-courses" class="hm-wrap" aria-labelledby="hm-courses-title">
+            <div class="hm-head">
+                <div>
+                    <p class="hm-label"><span>Featured Curriculums</span></p>
+                    <h2 id="hm-courses-title" class="hm-h2 {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Featured Design Curriculums', 'វគ្គសិក្សាដែលមានសម្រាប់អ្នក') }}</h2>
+                    <p class="hm-desc {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Curriculums engineered for professional mastery in graphic design, product UI/UX, and motion graphics.', 'កម្មវិធីសិក្សាផ្តោតលើជំនាញ Graphic Design, UI/UX, និង Motion Graphics ស្របតាមតម្រូវការទីផ្សារការងារ។') }}</p>
                 </div>
-            </section>
-
-            {{-- ============================== COURSES (real courses from the database) ============================== --}}
-            <section id="hm-courses" class="hm-wrap" aria-labelledby="hm-courses-title">
-                <div class="hm-head">
-                    <div>
-                        <p class="hm-label"><span>Featured Curriculums</span></p>
-                        <h2 id="hm-courses-title" class="hm-h2 {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Featured Design Curriculums', 'វគ្គសិក្សាដែលមានសម្រាប់អ្នក') }}</h2>
-                        <p class="hm-desc {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Curriculums engineered for professional mastery in graphic design, product UI/UX, and motion graphics.', 'កម្មវិធីសិក្សាផ្តោតលើជំនាញ Graphic Design, UI/UX, និង Motion Graphics ស្របតាមតម្រូវការទីផ្សារការងារ។') }}</p>
-                    </div>
-                    <div class="hm-tabs" data-jelly-tabs data-target="#hm-course-grid [data-category]">
-                        <div class="hm-tabs-track" role="tablist" aria-label="{{ $L('Filter courses', 'ជ្រើសរើសប្រភេទវគ្គសិក្សា') }}">
-                            <span class="hm-jelly-trail" aria-hidden="true"></span>
-                            <span class="hm-jelly" aria-hidden="true"><span class="hm-jelly-blob"></span><span class="hm-sparks"></span></span>
-                            <button type="button" role="tab" class="hm-tab" aria-selected="true" data-value="__all"><span>{{ $L('All', 'ទាំងអស់') }}</span></button>
-                            @foreach ($hmGroups as $group)
-                                <button type="button" role="tab" class="hm-tab" aria-selected="false" tabindex="-1" data-value="{{ $group }}"><span>{{ $group }}</span></button>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-
-                @if ($hmCards->isEmpty())
-                    <p class="hm-empty">{{ $L('New courses are on the way. Check back soon.', 'វគ្គសិក្សាថ្មីនឹងមកដល់ឆាប់ៗនេះ។') }}</p>
-                @else
-                    <div id="hm-course-grid" class="hm-course-grid">
-                        @foreach ($hmCards as $card)
-                            <article class="hm-ccard" data-category="{{ $card['group'] }}">
-                                <div class="hm-ccover" data-href="{{ $card['url'] }}">
-                                    <img src="{{ $card['photo'] }}" alt="{{ $card['title'] }}" loading="lazy" decoding="async">
-                                    <span class="hm-ccover-shade"></span>
-                                    <span class="hm-ccover-dots"></span>
-
-                                    <div class="hm-ccover-top">
-                                        <div class="hm-chips">
-                                            @foreach ($card['chips'] as $chip)
-                                                <span class="hm-chip hm-mono">{{ $chip }}</span>
-                                            @endforeach
-                                        </div>
-                                        <div class="hm-ccover-tr">
-                                            @if ($card['category'] !== '')
-                                                <span class="hm-cat">{{ $card['category'] }}</span>
-                                            @endif
-                                            <button type="button" class="hm-heart" data-wish="{{ $card['course']->slug }}" aria-pressed="false" aria-label="Toggle Wishlist" title="{{ $hmText['saveWish'] }}">
-                                                {!! $icon('heart', 'i35') !!}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div class="hm-ccover-mid">
-                                        <h3 class="hm-ccover-title {{ $hmKm ? 'hm-km' : '' }}">{{ $card['title'] }}</h3>
-                                        <p class="hm-ccover-tools hm-mono">{{ $card['tools'] }}</p>
-                                    </div>
-
-                                    <div class="hm-ccover-bot">
-                                        <span>{!! $icon('chart', 'i35') !!}<strong>{{ $card['level'] ?: $card['group'] }}</strong></span>
-                                        <span class="hm-mono">{{ $card['lessons'] }} {{ $L('Lessons', 'មេរៀន') }}</span>
-                                    </div>
-                                </div>
-
-                                <div class="hm-cbody">
-                                    <div>
-                                        <h3 class="hm-ctitle {{ $hmKm ? 'hm-km' : '' }}"><a href="{{ $card['url'] }}">{{ $card['title'] }}</a></h3>
-                                        <p class="hm-ctools">{{ $card['tools'] }}</p>
-                                        @if ($card['description'] !== '')
-                                            <p class="hm-cdesc">{{ $card['description'] }}</p>
-                                        @endif
-                                        <div class="hm-cmeta">
-                                            @if ($card['level'] !== '')
-                                                <span>{{ $card['level'] }}</span>
-                                                <span class="sep" aria-hidden="true">·</span>
-                                            @endif
-                                            @if ($card['duration'] !== '')
-                                                <span>{{ $card['duration'] }}</span>
-                                                <span class="sep" aria-hidden="true">·</span>
-                                            @endif
-                                            <span>{{ $card['lessons'] }} {{ $L('Lessons', 'មេរៀន') }}</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="hm-cfoot">
-                                        @if ($card['enrolled'])
-                                            <div>
-                                                <div class="hm-progress-row">
-                                                    <span>{{ $L('Progress', 'វឌ្ឍនភាពសិក្សា') }}</span>
-                                                    <b>{{ $card['progress'] }}%</b>
-                                                </div>
-                                                <div class="hm-bar"><i style="width: {{ $card['progress'] }}%"></i></div>
-                                            </div>
-                                        @else
-                                            @php $course = $card['course']; @endphp
-                                            <div class="hm-tuition">
-                                                <span>{{ $L('Tuition', 'តម្លៃសិក្សា') }}</span>
-                                                <div class="hm-price">
-                                                    @if ($course->isFree())
-                                                        <b>{{ __('Free') }}</b>
-                                                    @elseif ($course->isOnSale())
-                                                        <b>{{ $course->salePriceLabel() }}</b><s>{{ $course->priceLabel() }}</s>
-                                                    @else
-                                                        <b>{{ $course->priceLabel() }}</b>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        @endif
-
-                                        <div class="hm-cbtns">
-                                            <a href="{{ $card['url'] }}" class="hm-cbtn-ghost">{{ $L('View Course', 'ព័ត៌មានលម្អិត') }}</a>
-                                            @if ($card['enrolled'])
-                                                <a href="{{ $card['continue'] }}" class="hm-cbtn hm-cbtn--play"><svg class="i35" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" /></svg><span>{{ $L('Continue Learning', 'បន្តការរៀន') }}</span></a>
-                                            @else
-                                                <a href="{{ $card['url'] }}" class="hm-cbtn"><span>{{ $L('Enroll Now', 'ចុះឈ្មោះរៀន') }}</span>{!! $icon('arrow-right', 'i35') !!}</a>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
+                <div class="hm-tabs" data-jelly-tabs data-target="#hm-course-grid [data-category]">
+                    <div class="hm-tabs-track" role="tablist" aria-label="{{ $L('Filter courses', 'ជ្រើសរើសប្រភេទវគ្គសិក្សា') }}">
+                        <span class="hm-jelly-trail" aria-hidden="true"></span>
+                        <span class="hm-jelly" aria-hidden="true"><span class="hm-jelly-blob"></span><span class="hm-sparks"></span></span>
+                        <button type="button" role="tab" class="hm-tab" aria-selected="true" data-value="__all"><span>{{ $L('All', 'ទាំងអស់') }}</span></button>
+                        @foreach ($hmGroups as $group)
+                            <button type="button" role="tab" class="hm-tab" aria-selected="false" tabindex="-1" data-value="{{ $group }}"><span>{{ $group }}</span></button>
                         @endforeach
                     </div>
-                @endif
-            </section>
-
-            {{-- ============================== INSTRUCTOR ============================== --}}
-            <section id="hm-instructor" class="hm-wrap" aria-labelledby="hm-instructor-title">
-                <div class="hm-teach">
-                    <div class="hm-teach-grid">
-                        <div class="hm-teach-left">
-                            <div class="hm-portrait">
-                                <div class="hm-portrait-img" role="img" aria-label="Piseth Yoeurn - University Lecturer">{!! $blank !!}</div>
-                                <div class="hm-lect">
-                                    {!! $icon('grad') !!}
-                                    <div><span class="a">University Lecturer</span><span class="b hm-km">សាស្ត្រាចារ្យសាកលវិទ្យាល័យ</span></div>
-                                </div>
-                            </div>
-                            <div class="hm-stats">
-                                <div class="hm-stat"><span class="a">10+ Years</span><span class="b hm-km">បទពិសោធន៍ Design</span></div>
-                                <div class="hm-stat"><span class="a">1,400+</span><span class="b hm-km">និស្សិតបានសិក្សា</span></div>
-                            </div>
-                        </div>
-
-                        <div class="hm-teach-right">
-                            <div>
-                                <p class="hm-label hm-label--row"><span>Meet Your Instructor</span><span aria-hidden="true">·</span><span class="k hm-km">បទពិសោធន៍ជាង ១០ ឆ្នាំ</span></p>
-                                <h3 id="hm-instructor-title" class="hm-tname hm-km">លោកគ្រូ យឿន ពិសិដ្ឋ (Piseth Yoeurn)</h3>
-                                <p class="hm-trole">Senior Visual &amp; Motion Designer · Lecturer at Build Bright University, Siem Reap</p>
-                            </div>
-
-                            <blockquote class="hm-tquote hm-km">"ការរចនាមិនមែនត្រឹមតែការប្រើ Tool នោះទេ ប៉ុន្តែជាការគិតស៊ីជម្រៅពី Layout, Grid, Typography និង Emotion ដើម្បីដោះស្រាយបញ្ហាពិតប្រាកដ។ ខ្ញុំបង្កើត piseth.design ដើម្បីចែករំលែកបទពិសោធន៍ជាក់ស្តែងដល់ប្អូនៗនិស្សិតខ្មែរ។"</blockquote>
-
-                            <div class="hm-skills-wrap">
-                                <div class="hm-skills-head">
-                                    <div>{!! $icon('sparkles') !!}<h4 class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Core Skills & Creative Capabilities', 'ជំនាញឯកទេស (My Professional Skills)') }}</h4></div>
-                                    <span class="hm-spec hm-mono">10 Specializations</span>
-                                </div>
-                                <div class="hm-skills">
-                                    @foreach ($hmSkills as [$emoji, $skill, $tag])
-                                        <div class="hm-skill">
-                                            <div><span class="e" aria-hidden="true">{{ $emoji }}</span><span class="t">{{ $skill }}</span></div>
-                                            <span class="g hm-mono">{{ $tag }}</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-
-                            <div class="hm-trust-row">
-                                <div class="hm-trust">
-                                    @foreach (['Direct 1-on-1 Feedback', 'Agency Client Briefs', 'Khmer Typography Expertise'] as $item)
-                                        <span>{!! $icon('check-circle', 'i35') !!}<span>{{ $item }}</span></span>
-                                    @endforeach
-                                </div>
-                                <a href="{{ route('about') }}" class="hm-tlink"><span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Full Teaching Philosophy & Story', 'ស្វែងយល់បន្ថែមពីទស្សនវិជ្ជាបង្រៀន') }}</span>{!! $icon('chevron-right', 'i35') !!}</a>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-            </section>
+            </div>
 
-            {{-- ============================== STUDENT SHOWCASE ============================== --}}
-            <section id="hm-showcase" class="hm-wrap hm-show-sec" aria-labelledby="hm-showcase-title">
-                <div class="hm-head">
-                    <div>
-                        <h3 id="hm-showcase-title" class="hm-show-title hm-km">{{ $L('Student Creative Showcase', 'ស្នាដៃសិស្សឆ្នើម (Student Creative Showcase)') }}</h3>
-                        <p class="hm-desc {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Real-world studio deliverables crafted by Cambodian design students with official reviews by Teacher Piseth Yoeurn.', 'គម្រោងរចនាជាក់ស្តែងអនុវត្តដោយនិស្សិតកម្ពុជា តាមស្តង់ដារបង្រៀនរបស់លោកគ្រូ យឿន ពិសិដ្ឋ។ ចុចលើរូបដើម្បីពិនិត្យលម្អិត។') }}</p>
-                    </div>
-                    <div class="hm-tabs hm-tabs--sm" data-jelly-tabs data-target="#hm-show-grid [data-category]">
-                        <div class="hm-tabs-track" role="tablist" aria-label="{{ $L('Filter projects', 'ជ្រើសរើសប្រភេទស្នាដៃ') }}">
-                            <span class="hm-jelly-trail" aria-hidden="true"></span>
-                            <span class="hm-jelly" aria-hidden="true"><span class="hm-jelly-blob"></span><span class="hm-sparks"></span></span>
-                            <button type="button" role="tab" class="hm-tab" aria-selected="true" data-value="__all"><span>{{ $L('All', 'ទាំងអស់') }}</span></button>
-                            @foreach ($hmGroups as $group)
-                                <button type="button" role="tab" class="hm-tab" aria-selected="false" tabindex="-1" data-value="{{ $group }}"><span>{{ $group }}</span></button>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
+            @if ($hmCards->isEmpty())
+                <p class="hm-empty">{{ $L('New courses are on the way. Check back soon.', 'វគ្គសិក្សាថ្មីនឹងមកដល់ឆាប់ៗនេះ។') }}</p>
+            @else
+                <div id="hm-course-grid" class="hm-course-grid">
+                    @foreach ($hmCards as $card)
+                        <article class="hm-ccard" data-category="{{ $card['group'] }}">
+                            <div class="hm-ccover" data-href="{{ $card['url'] }}">
+                                <img src="{{ $card['photo'] }}" alt="{{ $card['title'] }}" loading="lazy" decoding="async">
+                                <span class="hm-ccover-shade"></span>
+                                <span class="hm-ccover-dots"></span>
 
-                <div id="hm-show-grid" class="hm-show-grid">
-                    @foreach ($hmProjects as $p)
-                        <article class="hm-scard" data-category="{{ $p['course'] }}" data-project="{{ $p['id'] }}" role="button" tabindex="0" aria-label="{{ $L('Inspect Details', 'ពិនិត្យស្នាដៃលម្អិត') }}: {{ $p['title'] }}">
-                            <div>
-                                <div class="hm-simg">
-                                    <img src="{{ $p['image'] }}" alt="{{ $p['title'] }}" loading="lazy" decoding="async">
-                                    <div class="hm-shover">
-                                        <div>
-                                            <span class="hm-inspect">{!! $icon('eye', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Inspect Details', 'ពិនិត្យស្នាដៃលម្អិត') }}</span></span>
-                                            <span class="hm-sgrade hm-mono">{{ $p['grade'] }}</span>
-                                        </div>
+                                <div class="hm-ccover-top">
+                                    <div class="hm-chips">
+                                        @foreach ($card['chips'] as $chip)
+                                            <span class="hm-chip hm-mono">{{ $chip }}</span>
+                                        @endforeach
                                     </div>
-                                    <span class="hm-sbadge hm-mono">{!! $icon('award', 'i3') !!}<span>{{ $p['badge'] }}</span></span>
-                                    <button type="button" class="hm-slike" data-like="{{ $p['id'] }}" aria-pressed="{{ in_array($p['id'], $hmDefaultLiked) ? 'true' : 'false' }}" title="Like Project" aria-label="Like Project">{!! $icon('heart') !!}</button>
+                                    <div class="hm-ccover-tr">
+                                        @if ($card['category'] !== '')
+                                            <span class="hm-cat">{{ $card['category'] }}</span>
+                                        @endif
+                                        <button type="button" class="hm-heart" data-wish="{{ $card['course']->slug }}" aria-pressed="false" aria-label="Toggle Wishlist" title="{{ $hmText['saveWish'] }}">
+                                            {!! $icon('heart', 'i35') !!}
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="hm-sbody">
-                                    <div class="hm-srow">
-                                        <span class="hm-scourse hm-mono">{{ $p['course'] }}</span>
-                                        <span class="hm-scount hm-mono {{ in_array($p['id'], $hmDefaultLiked) ? 'is-on' : '' }}" data-count-wrap="{{ $p['id'] }}">{!! $icon('heart', 'i35') !!}<span data-count>{{ $p['likes'] }}</span></span>
-                                    </div>
-                                    <div>
-                                        <h4 class="hm-stitle">{{ $p['title'] }}</h4>
-                                        <p class="hm-skh hm-km">{{ $p['titleKh'] }}</p>
-                                    </div>
-                                    <p class="hm-sdesc">{{ $p['description'] }}</p>
+
+                                <div class="hm-ccover-mid">
+                                    <h3 class="hm-ccover-title {{ $hmKm ? 'hm-km' : '' }}">{{ $card['title'] }}</h3>
+                                    <p class="hm-ccover-tools hm-mono">{{ $card['tools'] }}</p>
+                                </div>
+
+                                <div class="hm-ccover-bot">
+                                    <span>{!! $icon('chart', 'i35') !!}<strong>{{ $card['level'] ?: $card['group'] }}</strong></span>
+                                    <span class="hm-mono">{{ $card['lessons'] }} {{ $L('Lessons', 'មេរៀន') }}</span>
                                 </div>
                             </div>
-                            <div class="hm-sfoot">
-                                <div class="hm-sstudent">
-                                    <img src="{{ $p['studentAvatar'] }}" alt="{{ $p['studentName'] }}" loading="lazy" decoding="async">
-                                    <div><span class="a">{{ $p['studentName'] }}</span><span class="b hm-km">{{ $p['studentNameKh'] }}</span></div>
-                                </div>
-                                <div class="hm-stools">
-                                    @foreach (array_slice($p['tools'], 0, 2) as $tool)
-                                        <span class="hm-stool hm-mono">{{ $tool }}</span>
-                                    @endforeach
-                                    @if (count($p['tools']) > 2)
-                                        <span class="hm-smore hm-mono">+{{ count($p['tools']) - 2 }}</span>
+
+                            <div class="hm-cbody">
+                                <div>
+                                    <h3 class="hm-ctitle {{ $hmKm ? 'hm-km' : '' }}"><a href="{{ $card['url'] }}">{{ $card['title'] }}</a></h3>
+                                    <p class="hm-ctools">{{ $card['tools'] }}</p>
+                                    @if ($card['description'] !== '')
+                                        <p class="hm-cdesc">{{ $card['description'] }}</p>
                                     @endif
+                                    <div class="hm-cmeta">
+                                        @if ($card['level'] !== '')
+                                            <span>{{ $card['level'] }}</span>
+                                            <span class="sep" aria-hidden="true">·</span>
+                                        @endif
+                                        @if ($card['duration'] !== '')
+                                            <span>{{ $card['duration'] }}</span>
+                                            <span class="sep" aria-hidden="true">·</span>
+                                        @endif
+                                        <span>{{ $card['lessons'] }} {{ $L('Lessons', 'មេរៀន') }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="hm-cfoot">
+                                    @if ($card['enrolled'])
+                                        <div>
+                                            <div class="hm-progress-row">
+                                                <span>{{ $L('Progress', 'វឌ្ឍនភាពសិក្សា') }}</span>
+                                                <b>{{ $card['progress'] }}%</b>
+                                            </div>
+                                            <div class="hm-bar"><i style="width: {{ $card['progress'] }}%"></i></div>
+                                        </div>
+                                    @else
+                                        @php $course = $card['course']; @endphp
+                                        <div class="hm-tuition">
+                                            <span>{{ $L('Tuition', 'តម្លៃសិក្សា') }}</span>
+                                            <div class="hm-price">
+                                                @if ($course->isFree())
+                                                    <b>{{ __('Free') }}</b>
+                                                @elseif ($course->isOnSale())
+                                                    <b>{{ $course->salePriceLabel() }}</b><s>{{ $course->priceLabel() }}</s>
+                                                @else
+                                                    <b>{{ $course->priceLabel() }}</b>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <div class="hm-cbtns">
+                                        <a href="{{ $card['url'] }}" class="hm-cbtn-ghost">{{ $L('View Course', 'ព័ត៌មានលម្អិត') }}</a>
+                                        @if ($card['enrolled'])
+                                            <a href="{{ $card['continue'] }}" class="hm-cbtn hm-cbtn--play"><svg class="i35" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" /></svg><span>{{ $L('Continue Learning', 'បន្តការរៀន') }}</span></a>
+                                        @else
+                                            <a href="{{ $card['url'] }}" class="hm-cbtn"><span>{{ $L('Enroll Now', 'ចុះឈ្មោះរៀន') }}</span>{!! $icon('arrow-right', 'i35') !!}</a>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         </article>
                     @endforeach
                 </div>
-            </section>
-        </main>
+            @endif
+        </section>
 
-        {{-- ============================== FOOTER ============================== --}}
-        <footer class="hm-footer">
-            <div class="hm-wrap hm-footer-in">
-                <div class="hm-fgrid">
-                    <div class="hm-fcol hm-fcol--brand">
-                        <span class="hm-wordmark">piseth<span>.design</span></span>
-                        <p class="hm-ftext">Modern creative design academy founded by university lecturer Piseth Yoeurn. Educating Cambodian creators to craft international-standard design.</p>
-                        <p class="hm-fmotto hm-km">រៀន Design ឲ្យច្បាស់ បង្កើតស្នាដៃឲ្យមានតម្លៃ។</p>
+        {{-- ============================== INSTRUCTOR ============================== --}}
+        <section id="hm-instructor" class="hm-wrap" aria-labelledby="hm-instructor-title">
+            <div class="hm-teach">
+                <div class="hm-teach-grid">
+                    <div class="hm-teach-left">
+                        <div class="hm-portrait">
+                            <div class="hm-portrait-img" role="img" aria-label="Piseth Yoeurn - University Lecturer">{!! $blank !!}</div>
+                            <div class="hm-lect">
+                                {!! $icon('grad') !!}
+                                <div><span class="a">University Lecturer</span><span class="b hm-km">សាស្ត្រាចារ្យសាកលវិទ្យាល័យ</span></div>
+                            </div>
+                        </div>
+                        <div class="hm-stats">
+                            <div class="hm-stat"><span class="a">10+ Years</span><span class="b hm-km">បទពិសោធន៍ Design</span></div>
+                            <div class="hm-stat"><span class="a">1,400+</span><span class="b hm-km">និស្សិតបានសិក្សា</span></div>
+                        </div>
                     </div>
 
-                    <div class="hm-fcol">
-                        <h4 class="hm-fhead hm-km">Courses · វគ្គសិក្សា</h4>
-                        <ul class="hm-flinks">
-                            @foreach ($hmCards->take(4) as $card)
-                                <li><a href="{{ $card['url'] }}">{{ $card['course']->title_en ?: $card['title'] }}</a></li>
-                            @endforeach
-                            <li><a href="{{ route('courses', ['free' => 1]) }}">{{ __('Free Courses') }}</a></li>
-                        </ul>
-                    </div>
+                    <div class="hm-teach-right">
+                        <div>
+                            <p class="hm-label hm-label--row"><span>Meet Your Instructor</span><span aria-hidden="true">·</span><span class="k hm-km">បទពិសោធន៍ជាង ១០ ឆ្នាំ</span></p>
+                            <h3 id="hm-instructor-title" class="hm-tname hm-km">លោកគ្រូ យឿន ពិសិដ្ឋ (Piseth Yoeurn)</h3>
+                            <p class="hm-trole">Senior Visual &amp; Motion Designer · Lecturer at Build Bright University, Siem Reap</p>
+                        </div>
 
-                    <div class="hm-fcol">
-                        <h4 class="hm-fhead">Student Platform</h4>
-                        <ul class="hm-flinks">
-                            <li><a href="{{ route('learning.index') }}">Student Dashboard</a></li>
-                            <li><a href="{{ route('courses') }}">Video Classroom</a></li>
-                            <li><a href="{{ route('learning.index') }}">Certificates</a></li>
-                            <li><a href="{{ route('learning.profile') }}">My Profile</a></li>
-                        </ul>
-                    </div>
+                        <blockquote class="hm-tquote hm-km">"ការរចនាមិនមែនត្រឹមតែការប្រើ Tool នោះទេ ប៉ុន្តែជាការគិតស៊ីជម្រៅពី Layout, Grid, Typography និង Emotion ដើម្បីដោះស្រាយបញ្ហាពិតប្រាកដ។ ខ្ញុំបង្កើត piseth.design ដើម្បីចែករំលែកបទពិសោធន៍ជាក់ស្តែងដល់ប្អូនៗនិស្សិតខ្មែរ។"</blockquote>
 
-                    <div class="hm-fcol">
-                        <h4 class="hm-fhead">Teacher &amp; Community</h4>
-                        <p class="hm-ftext">Lecturer at Build Bright University, Siem Reap.</p>
-                        <div class="hm-fcontact">
-                            <span class="k hm-mono">Telegram Community:</span>
-                            <button type="button"
-                                aria-haspopup="dialog"
-                                aria-label="{{ __('Telegram (show QR code)') }}"
-                                x-data
-                                x-on:click="$dispatch('open-telegram-qr')"
-                                class="hm-tg pd-qr-trigger">@@PISETH_YOEURN {!! $icon('arrow-up-right', 'i3') !!}</button>
-                            @include('partials._telegram-qr-dialog')
-                            <span class="k hm-mono">Direct Mentorship:</span>
-                            <a class="v" href="mailto:{{ 'pisethyoeurn69@gmail.com' }}">{{ 'pisethyoeurn69@gmail.com' }}</a>
-                            <span class="k hm-mono">Follow:</span>
-                            <span class="hm-fsocial">
-                                <a href="{{ config('social.facebook') }}" target="_blank" rel="noopener noreferrer" aria-label="{{ __('Facebook (opens in a new tab)') }}">Facebook</a>
-                                <span aria-hidden="true">·</span>
-                                <a href="{{ config('social.instagram') }}" target="_blank" rel="noopener noreferrer" aria-label="{{ __('Instagram (opens in a new tab)') }}">Instagram</a>
-                            </span>
+                        <div class="hm-skills-wrap">
+                            <div class="hm-skills-head">
+                                <div>{!! $icon('sparkles') !!}<h4 class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Core Skills & Creative Capabilities', 'ជំនាញឯកទេស (My Professional Skills)') }}</h4></div>
+                                <span class="hm-spec hm-mono">10 Specializations</span>
+                            </div>
+                            <div class="hm-skills">
+                                @foreach ($hmSkills as [$emoji, $skill, $tag])
+                                    <div class="hm-skill">
+                                        <div><span class="e" aria-hidden="true">{{ $emoji }}</span><span class="t">{{ $skill }}</span></div>
+                                        <span class="g hm-mono">{{ $tag }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div class="hm-trust-row">
+                            <div class="hm-trust">
+                                @foreach (['Direct 1-on-1 Feedback', 'Agency Client Briefs', 'Khmer Typography Expertise'] as $item)
+                                    <span>{!! $icon('check-circle', 'i35') !!}<span>{{ $item }}</span></span>
+                                @endforeach
+                            </div>
+                            <a href="{{ route('about') }}" class="hm-tlink"><span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Full Teaching Philosophy & Story', 'ស្វែងយល់បន្ថែមពីទស្សនវិជ្ជាបង្រៀន') }}</span>{!! $icon('chevron-right', 'i35') !!}</a>
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
 
-                <div class="hm-fbar">
-                    <p>&copy; {{ date('Y') }} piseth.design. All rights reserved. Phnom Penh, Cambodia.</p>
-                    <div>
-                        <span>Apple-inspired Minimalist UX</span>
-                        <span aria-hidden="true">·</span>
-                        <span>Khmer Creative Education</span>
-                        <span aria-hidden="true">·</span>
-                        <a href="{{ route('about') }}">About Teacher Piseth</a>
+        {{-- ============================== STUDENT SHOWCASE ============================== --}}
+        <section id="hm-showcase" class="hm-wrap hm-show-sec" aria-labelledby="hm-showcase-title">
+            <div class="hm-head">
+                <div>
+                    <h3 id="hm-showcase-title" class="hm-show-title hm-km">{{ $L('Student Creative Showcase', 'ស្នាដៃសិស្សឆ្នើម (Student Creative Showcase)') }}</h3>
+                    <p class="hm-desc {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Real-world studio deliverables crafted by Cambodian design students with official reviews by Teacher Piseth Yoeurn.', 'គម្រោងរចនាជាក់ស្តែងអនុវត្តដោយនិស្សិតកម្ពុជា តាមស្តង់ដារបង្រៀនរបស់លោកគ្រូ យឿន ពិសិដ្ឋ។ ចុចលើរូបដើម្បីពិនិត្យលម្អិត។') }}</p>
+                </div>
+                <div class="hm-tabs hm-tabs--sm" data-jelly-tabs data-target="#hm-show-grid [data-category]">
+                    <div class="hm-tabs-track" role="tablist" aria-label="{{ $L('Filter projects', 'ជ្រើសរើសប្រភេទស្នាដៃ') }}">
+                        <span class="hm-jelly-trail" aria-hidden="true"></span>
+                        <span class="hm-jelly" aria-hidden="true"><span class="hm-jelly-blob"></span><span class="hm-sparks"></span></span>
+                        <button type="button" role="tab" class="hm-tab" aria-selected="true" data-value="__all"><span>{{ $L('All', 'ទាំងអស់') }}</span></button>
+                        @foreach ($hmGroups as $group)
+                            <button type="button" role="tab" class="hm-tab" aria-selected="false" tabindex="-1" data-value="{{ $group }}"><span>{{ $group }}</span></button>
+                        @endforeach
                     </div>
                 </div>
             </div>
-        </footer>
 
-        {{-- Phone bottom bar, like the live site. --}}
-        <nav class="hm-bnav" aria-label="{{ $L('Quick links', 'តំណរហ័ស') }}">
-            <div>
-                <a href="{{ route('home') }}" aria-current="page">{!! $icon('house', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Home', 'ទំព័រដើម') }}</span></a>
-                <a href="{{ route('courses') }}">{!! $icon('book', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Courses', 'វគ្គសិក្សា') }}</span></a>
-                <a href="{{ route('courses', ['free' => 1]) }}">{!! $icon('folder', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Resources', 'ឯកសារ') }}</span></a>
-                <a href="{{ route('about') }}">{!! $icon('sparkles', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('About', 'អំពី') }}</span></a>
-                <a href="{{ route('learning.profile') }}">{!! $icon('user', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Profile', 'គណនី') }}</span></a>
+            <div id="hm-show-grid" class="hm-show-grid">
+                @foreach ($hmProjects as $p)
+                    <article class="hm-scard" data-category="{{ $p['course'] }}" data-project="{{ $p['id'] }}" role="button" tabindex="0" aria-label="{{ $L('Inspect Details', 'ពិនិត្យស្នាដៃលម្អិត') }}: {{ $p['title'] }}">
+                        <div>
+                            <div class="hm-simg">
+                                <img src="{{ $p['image'] }}" alt="{{ $p['title'] }}" loading="lazy" decoding="async">
+                                <div class="hm-shover">
+                                    <div>
+                                        <span class="hm-inspect">{!! $icon('eye', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Inspect Details', 'ពិនិត្យស្នាដៃលម្អិត') }}</span></span>
+                                        <span class="hm-sgrade hm-mono">{{ $p['grade'] }}</span>
+                                    </div>
+                                </div>
+                                <span class="hm-sbadge hm-mono">{!! $icon('award', 'i3') !!}<span>{{ $p['badge'] }}</span></span>
+                                <button type="button" class="hm-slike" data-like="{{ $p['id'] }}" aria-pressed="{{ in_array($p['id'], $hmDefaultLiked) ? 'true' : 'false' }}" title="Like Project" aria-label="Like Project">{!! $icon('heart') !!}</button>
+                            </div>
+                            <div class="hm-sbody">
+                                <div class="hm-srow">
+                                    <span class="hm-scourse hm-mono">{{ $p['course'] }}</span>
+                                    <span class="hm-scount hm-mono {{ in_array($p['id'], $hmDefaultLiked) ? 'is-on' : '' }}" data-count-wrap="{{ $p['id'] }}">{!! $icon('heart', 'i35') !!}<span data-count>{{ $p['likes'] }}</span></span>
+                                </div>
+                                <div>
+                                    <h4 class="hm-stitle">{{ $p['title'] }}</h4>
+                                    <p class="hm-skh hm-km">{{ $p['titleKh'] }}</p>
+                                </div>
+                                <p class="hm-sdesc">{{ $p['description'] }}</p>
+                            </div>
+                        </div>
+                        <div class="hm-sfoot">
+                            <div class="hm-sstudent">
+                                <img src="{{ $p['studentAvatar'] }}" alt="{{ $p['studentName'] }}" loading="lazy" decoding="async">
+                                <div><span class="a">{{ $p['studentName'] }}</span><span class="b hm-km">{{ $p['studentNameKh'] }}</span></div>
+                            </div>
+                            <div class="hm-stools">
+                                @foreach (array_slice($p['tools'], 0, 2) as $tool)
+                                    <span class="hm-stool hm-mono">{{ $tool }}</span>
+                                @endforeach
+                                @if (count($p['tools']) > 2)
+                                    <span class="hm-smore hm-mono">+{{ count($p['tools']) - 2 }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
             </div>
-        </nav>
+        </section>
 
-        {{-- Language and theme: one pill in the bottom-right corner. --}}
-        <div class="hm-prefs">
-            <form method="POST" action="{{ route('locale') }}">
-                @csrf
-                <input type="hidden" name="locale" value="{{ $hmKm ? 'en' : 'km' }}">
-                <button type="submit" class="hm-pref" aria-label="{{ $hmKm ? 'Switch to English' : 'ប្តូរទៅភាសាខ្មែរ' }}" title="{{ $hmKm ? 'Switch to English (EN)' : 'ប្តូរទៅភាសាខ្មែរ (KM)' }}">
-                    @if ($hmKm)
-                        <svg class="hm-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#032EA1" /><rect y="5" width="30" height="10" fill="#E00025" /><path fill="#fff" d="M9 13.4h12v1.2H9zM10.2 11.6h9.6v1.8h-9.6zM11.6 9.4h1.2v2.2h-1.2zM14.4 7.4h1.2v4.2h-1.2zM17.2 9.4h1.2v2.2h-1.2z" /></svg>
-                        <span class="l hm-km">ខ្មែរ</span>
-                    @else
-                        <svg class="hm-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="hm-uk-clip"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z" /></clipPath><path d="M0,0 v30 h60 v-30 z" fill="#012169" /><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6" /><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#hm-uk-clip)" stroke="#C8102E" stroke-width="4" /><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10" /><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6" /></svg>
-                        <span class="l">EN</span>
-                    @endif
-                </button>
-            </form>
-            <span class="hm-pref-divider" aria-hidden="true"></span>
-            <button type="button" class="hm-pref" @click="toggleTheme($event)"
-                :aria-label="dark ? 'Switch to light mode' : 'Switch to dark mode'" :title="dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
-                <span class="hm-spin-in" style="display:flex; color:#4595FF" x-show="dark" x-cloak>{!! $icon('moon', 'i35') !!}</span>
-                <span class="hm-spin-in" style="display:flex; color:#F59E0B" x-show="!dark">{!! $icon('sun', 'i35') !!}</span>
-                <span class="l m" x-text="dark ? 'Dark' : 'Light'">Dark</span>
-            </button>
-        </div>
-
+    <x-slot:after>
         {{-- Project details dialog (filled by the script below) --}}
         <div class="hm-modal" id="hm-modal" hidden>
             <div class="hm-dialog" role="dialog" aria-modal="true" aria-labelledby="hm-modal-title">
@@ -1662,8 +975,9 @@
                 </div>
             </div>
         </div>
-    </div>
+    </x-slot:after>
 
+    <x-slot:scripts>
     <script>
         window.hmProjects = @json(collect($hmProjects)->keyBy('id'));
         window.hmDefaultLiked = @json($hmDefaultLiked);
@@ -1679,81 +993,6 @@
                 set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
             };
             function restart(el, cls) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
-
-            /* ---------- jelly filter tabs ----------
-               The pill springs to the clicked tab with overshoot, squashes and
-               stretches as it lands, a soft trail follows it, a shimmer sweeps
-               across and a few sparks pop out. */
-            var SPARKS = [[-29, -20], [29, -20], [-38, 3], [38, 3], [-19, 22], [19, 22]];
-            document.querySelectorAll('[data-jelly-tabs]').forEach(function (root) {
-                var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
-                var pill = root.querySelector('.hm-jelly');
-                var trail = root.querySelector('.hm-jelly-trail');
-                var blob = root.querySelector('.hm-jelly-blob');
-                var sparks = root.querySelector('.hm-sparks');
-                var items = function () { return document.querySelectorAll(root.getAttribute('data-target')); };
-                var active = 0;
-
-                function place(animate) {
-                    var t = tabs[active];
-                    if (!t) return;
-                    if (!animate) root.classList.add('is-static');
-                    [pill, trail].forEach(function (el) {
-                        el.style.width = t.offsetWidth + 'px';
-                        el.style.transform = 'translateX(' + t.offsetLeft + 'px)';
-                    });
-                    if (!animate) { void root.offsetWidth; root.classList.remove('is-static'); }
-                }
-
-                function burst() {
-                    sparks.innerHTML = '';
-                    if (reduce) return;
-                    SPARKS.forEach(function (d) {
-                        var s = document.createElement('i');
-                        s.style.setProperty('--dx', d[0] + 'px');
-                        s.style.setProperty('--dy', d[1] + 'px');
-                        sparks.appendChild(s);
-                    });
-                }
-
-                function filter(value) {
-                    items().forEach(function (el) {
-                        var show = value === '__all' || el.getAttribute('data-category') === value;
-                        if (show && el.hidden) { el.hidden = false; restart(el, 'is-in'); }
-                        else if (!show) { el.hidden = true; }
-                    });
-                }
-
-                function select(i, focus) {
-                    if (i === active) return;
-                    tabs[active].setAttribute('aria-selected', 'false');
-                    tabs[active].tabIndex = -1;
-                    active = i;
-                    var t = tabs[i];
-                    t.setAttribute('aria-selected', 'true');
-                    t.tabIndex = 0;
-                    if (focus) t.focus();
-                    place(true);
-                    restart(blob, 'is-jelly');
-                    restart(t.querySelector('span'), 'is-pop');
-                    burst();
-                    filter(t.getAttribute('data-value'));
-                    if (root.scrollWidth > root.clientWidth) {
-                        root.scrollTo({ left: t.offsetLeft - (root.clientWidth - t.offsetWidth) / 2, behavior: reduce ? 'auto' : 'smooth' });
-                    }
-                }
-
-                tabs.forEach(function (t, i) { t.addEventListener('click', function () { select(i); }); });
-                root.addEventListener('keydown', function (e) {
-                    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-                    e.preventDefault();
-                    select((active + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length, true);
-                });
-
-                place(false);
-                if (window.ResizeObserver) new ResizeObserver(function () { place(false); }).observe(root.querySelector('.hm-tabs-track'));
-                if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { place(false); });
-            });
 
             /* ---------- course cover opens the course ---------- */
             document.querySelectorAll('.hm-ccover[data-href]').forEach(function (cover) {
@@ -1917,6 +1156,5 @@
             if (m && projects[m[1]]) open(m[1]);
         })();
     </script>
-</body>
-
-</html>
+    </x-slot:scripts>
+</x-live-layout>
