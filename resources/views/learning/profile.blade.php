@@ -691,7 +691,7 @@
                     });
                     if (focus) tab.focus();
                     tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                    if (remember && history.replaceState) history.replaceState(null, '', '#' + name);
+                    if (remember) { try { history.replaceState(null, '', '#' + name); } catch (e) {} }
                     return true;
                 }
 
