@@ -20,7 +20,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    {{-- Archivo + Kantumruy Pro: the shared top bar. Inter, Noto Sans Khmer, JetBrains Mono: this page. --}}
+    {{-- Archivo + Kantumruy Pro: the promotion bar and Telegram popup. Inter, Noto Sans Khmer, JetBrains Mono: this page. --}}
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@700;800;900&family=Kantumruy+Pro:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Khmer:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -80,10 +80,6 @@
             100% { width: var(--r); height: var(--r); opacity: 0; }
         }
 
-        /* On the homepage the language / theme switch lives in the floating
-           pill at the bottom-right (.hm-prefs), so the copy in the shared top
-           bar is hidden here only. Every other page keeps it. */
-        .hm-body #site-nav .sn-cluster { display: none !important; }
 
         /* ==================================================================
            HOME — colours (light, then dark)
@@ -185,6 +181,89 @@
         @media (min-width: 640px) { .hm-h2 { font-size: 1.875rem; line-height: 2.25rem; } }
         .hm-desc { margin: .25rem 0 0; max-width: 36rem; font-size: .75rem; line-height: 1rem; color: var(--soft); }
         @media (min-width: 640px) { .hm-desc { font-size: .875rem; line-height: 1.25rem; } }
+
+        /* ==================================================================
+           TOP BAR (the live site's header; this page only)
+           ================================================================== */
+        .hm-header { position: sticky; top: 0; z-index: 40; width: 100%; background: rgba(255, 255, 255, .85); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); font-family: Inter, 'Noto Sans Khmer', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; transition: background-color .2s ease, border-color .2s ease; }
+        html.dark .hm-header { background: rgba(28, 28, 30, .85); }
+        .hm-hbar { max-width: 80rem; height: 4rem; margin: 0 auto; padding: 0 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        @media (min-width: 640px) { .hm-hbar { padding: 0 1.5rem; } }
+        @media (min-width: 1024px) { .hm-hbar { padding: 0 2rem; } }
+        .hm-hlogo { flex-shrink: 0; display: flex; align-items: center; min-height: 44px; font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: -.025em; color: var(--ink); text-decoration: none; }
+        @media (min-width: 640px) { .hm-hlogo { font-size: 1.25rem; } }
+        .hm-hlogo span { color: var(--blue); }
+        .hm-hnav { display: none; }
+        @media (min-width: 768px) { .hm-hnav { display: flex; align-items: center; gap: 2rem; } }
+        .hm-hnav a { position: relative; padding: .375rem 0; font-size: .875rem; line-height: 1.25rem; font-weight: 500; white-space: nowrap; color: var(--mut); text-decoration: none; transition: color .15s ease; }
+        .hm-hnav a:hover { color: var(--ink); }
+        .hm-hnav a[aria-current="page"] { font-weight: 600; color: var(--blue); }
+        .hm-hnav a[aria-current="page"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 9999px; background: var(--blue); }
+        .hm-hright { position: relative; display: flex; align-items: center; gap: .5rem; }
+        @media (min-width: 640px) { .hm-hright { gap: .625rem; } }
+        .hm-hbell { position: relative; display: flex; padding: .5rem; border: 0; border-radius: .75rem; background: transparent; color: var(--mut); cursor: pointer; transition: all .15s ease; }
+        .hm-hbell:hover, .hm-hbell[aria-expanded="true"] { color: var(--ink); background: #F5F7FA; }
+        html.dark .hm-hbell:hover, html.dark .hm-hbell[aria-expanded="true"] { background: #242629; }
+        .hm-hbell .dot { position: absolute; top: .375rem; right: .375rem; width: .5rem; height: .5rem; border-radius: 9999px; background: #1877F2; box-shadow: 0 0 0 2px #fff; }
+        html.dark .hm-hbell .dot { box-shadow: 0 0 0 2px #1C1C1E; }
+        .hm-havatar { display: flex; padding: 2px; border: 0; border-radius: 9999px; background: transparent; cursor: pointer; transition: box-shadow .15s ease; }
+        .hm-havatar:hover, .hm-havatar[aria-expanded="true"] { box-shadow: 0 0 0 2px rgba(24, 119, 242, .4); }
+        .hm-havatar .pd-avatar { box-shadow: 0 0 0 1px var(--line); }
+        .hm-hsignin { display: inline-flex; align-items: center; gap: .375rem; padding: .375rem .75rem; border-radius: .75rem; background: #4DA3FF; color: #fff; font-size: .75rem; line-height: 1rem; font-weight: 600; text-decoration: none; white-space: nowrap; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); transition: background .15s ease; }
+        .hm-hsignin:hover { background: #3892F3; }
+        .hm-hportal, .hm-hdash { display: none; align-items: center; gap: .375rem; padding: .375rem .75rem; border-radius: .5rem; font-size: .75rem; line-height: 1rem; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background .15s ease; }
+        @media (min-width: 1024px) { .hm-hportal, .hm-hdash { display: inline-flex; } }
+        .hm-hportal { color: #4DA3FF; background: #EAF5FF; border: 1px solid rgba(77, 163, 255, .3); }
+        .hm-hportal:hover { background: #D9EDFF; }
+        html.dark .hm-hportal { background: rgba(77, 163, 255, .15); }
+        html.dark .hm-hportal:hover { background: rgba(77, 163, 255, .25); }
+        .hm-hdash { color: #059669; background: #ECFDF5; border: 1px solid rgba(16, 185, 129, .3); }
+        .hm-hdash:hover { background: #D1FAE5; }
+        html.dark .hm-hdash { color: #34D399; background: rgba(2, 44, 34, .3); }
+        html.dark .hm-hdash:hover { background: rgba(2, 44, 34, .5); }
+        .hm-hpanel { position: absolute; top: calc(100% + .5rem); right: 0; z-index: 50; width: min(16rem, calc(100vw - 2rem)); overflow: hidden; border-radius: .75rem; background: #fff; border: 1px solid #E2E8F0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1); transform-origin: top right; animation: hm-zoom-in .15s ease-out both; }
+        html.dark .hm-hpanel { background: #151B23; border-color: #222936; }
+        .hm-hpanel--bell { width: min(18rem, calc(100vw - 2rem)); }
+        .hm-hpanel-head { padding: .875rem; border-bottom: 1px solid #F1F5F9; }
+        html.dark .hm-hpanel-head { border-color: #222936; }
+        .hm-hrow { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+        .hm-hname { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; line-height: 1rem; font-weight: 600; color: var(--strong); }
+        .hm-hmail { margin: .125rem 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--soft); }
+        .hm-hrole { flex-shrink: 0; padding: .125rem .5rem; border-radius: 9999px; font-size: 9px; font-weight: 700; text-transform: uppercase; background: #ECFDF5; color: #059669; border: 1px solid rgba(16, 185, 129, .2); }
+        html.dark .hm-hrole { background: rgba(2, 44, 34, .4); color: #34D399; }
+        .hm-hrole--teacher, html.dark .hm-hrole--teacher { background: rgba(77, 163, 255, .15); color: #4DA3FF; border-color: rgba(77, 163, 255, .3); }
+        .hm-hmenu { padding: .25rem; font-size: .75rem; line-height: 1rem; }
+        .hm-hmenu form { margin: 0; }
+        .hm-hitem { width: 100%; display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; border: 0; border-radius: .5rem; background: transparent; font: inherit; text-align: left; text-decoration: none; color: #334155; cursor: pointer; transition: background .15s ease; }
+        html.dark .hm-hitem { color: #CBD5E1; }
+        .hm-hitem:hover { background: #F1F5F9; }
+        html.dark .hm-hitem:hover { background: #1C232D; }
+        .hm-hitem svg { color: #4DA3FF; }
+        .hm-hitem--accent, html.dark .hm-hitem--accent { font-weight: 600; color: #4DA3FF; background: rgba(77, 163, 255, .1); }
+        .hm-hitem--accent:hover, html.dark .hm-hitem--accent:hover { background: rgba(77, 163, 255, .2); }
+        .hm-hitem--split { justify-content: space-between; }
+        .hm-hitem--split > span:first-child { display: flex; align-items: center; gap: .5rem; }
+        .hm-hitem .hint { font-size: 10px; font-weight: 600; color: #4DA3FF; }
+        .hm-hitem .hint--mono { font-weight: 400; color: #94A3B8; }
+        .hm-hitem--danger, html.dark .hm-hitem--danger { font-weight: 600; color: #E11D48; }
+        html.dark .hm-hitem--danger { color: #FB7185; }
+        .hm-hitem--danger svg { color: #F43F5E; }
+        .hm-hitem--danger:hover { background: #FFF1F2; }
+        html.dark .hm-hitem--danger:hover { background: rgba(76, 5, 25, .4); }
+        .hm-hsep { margin-top: .25rem; padding-top: .25rem; border-top: 1px solid #F1F5F9; }
+        html.dark .hm-hsep { border-color: #222936; }
+        .hm-hbrand { display: flex; align-items: center; gap: .625rem; }
+        .hm-hbrand img { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+        .hm-hnote { display: block; padding: .875rem; text-decoration: none; transition: background .15s ease; }
+        .hm-hnote:hover { background: #F8FAFC; }
+        html.dark .hm-hnote:hover { background: #1C232D; }
+        .hm-hnote .pill { display: inline-block; padding: .125rem .5rem; border-radius: 9999px; background: rgba(77, 163, 255, .15); font-size: 10px; font-weight: 700; color: #4DA3FF; }
+        .hm-hnote .t { display: block; margin-top: .375rem; font-size: .75rem; line-height: 1rem; font-weight: 600; color: var(--strong); }
+        .hm-hnote .m { display: block; margin-top: .125rem; font-size: 11px; line-height: 1.5; color: var(--soft); }
+        .hm-hnote .go { display: inline-flex; align-items: center; gap: .25rem; margin-top: .5rem; font-size: 11px; font-weight: 600; color: var(--blue); }
+        .hm-hempty { margin: 0; padding: 1.25rem .875rem; text-align: center; font-size: .75rem; color: var(--soft); }
+        html:lang(km) .hm-body :is(.hm-hnav a, .hm-hsignin, .hm-hportal, .hm-hdash, .hm-hitem, .hm-hname, .hm-hempty) { line-height: 1.5; }
+        html:lang(km) .hm-body .hm-hlogo { letter-spacing: -.025em; }
 
         /* ==================================================================
            HERO
@@ -769,6 +848,10 @@
         'folder' => '<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
         'user' => '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
         'moon' => '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+        'bell' => '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',
+        'shield' => '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+        'logout' => '<path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>',
+        'settings' => '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
         'sun' => '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
     ];
     $icon = fn (string $name, string $class = 'i4') => '<svg class="'.$class.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'.$hmIconPaths[$name].'</svg>';
@@ -827,7 +910,7 @@
             'lessons' => (int) $course->lessons_count,
             'enrolled' => $enrollment !== null,
             'progress' => $enrollment ? $course->progressPercent($hmUser) : 0,
-            'continue' => $lesson ? route('courses.lessons.show', [$course, $lesson]) : route('courses.show', $course),
+            'continue' => ($lesson && filled($lesson->getRouteKey())) ? route('courses.lessons.show', [$course, $lesson]) : route('courses.show', $course),
             'url' => route('courses.show', $course),
         ];
     });
@@ -915,10 +998,106 @@
         {{-- Screen readers still hear the mode change --}}
         <div class="hm-sr" role="status" aria-live="polite" x-text="announce"></div>
 
-        {{-- The live promotion sits above the menu; the menu is the bar shared with every page. --}}
+        {{-- The live promotion sits above the top bar. --}}
         @include('partials._promo')
 
-        @include('partials._site-nav')
+        {{-- Top bar from the live design (this page only; every other page keeps the shared bar). --}}
+        <header id="site-nav" class="hm-header">
+            <div class="hm-hbar">
+                <a href="{{ route('home') }}" class="hm-hlogo" aria-label="piseth.design home">piseth<span>.design</span></a>
+
+                <nav class="hm-hnav" aria-label="{{ $L('Main', 'ម៉ឺនុយ') }}">
+                    <a href="{{ route('home') }}" aria-current="page" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Home', 'ទំព័រដើម') }}</a>
+                    <a href="{{ route('courses') }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Courses', 'វគ្គសិក្សា') }}</a>
+                    <a href="{{ route('courses', ['free' => 1]) }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Resources', 'ឯកសារ') }}</a>
+                    <a href="{{ route('about') }}" class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('About', 'អំពីលោកគ្រូ') }}</a>
+                </nav>
+
+                <div class="hm-hright" x-data="{ bell: false, acct: false }" @click.outside="bell = false; acct = false" @keydown.escape.window="bell = false; acct = false">
+                    <button type="button" class="hm-hbell" @click="bell = !bell; acct = false" :aria-expanded="bell.toString()" aria-expanded="false" aria-haspopup="true" aria-label="Notifications" title="Notification Center">
+                        {!! $icon('bell') !!}
+                        @if ($promotion ?? null)
+                            <span class="dot" aria-hidden="true"></span>
+                        @endif
+                    </button>
+                    <div class="hm-hpanel hm-hpanel--bell" x-show="bell" x-cloak>
+                        <div class="hm-hpanel-head hm-hbrand">
+                            <img src="{{ asset('images/logo-mark-96.png') }}" alt="" width="24" height="24">
+                            <div style="min-width:0">
+                                <p class="hm-hname {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Notifications', 'ការជូនដំណឹង') }}</p>
+                                <p class="hm-hmail">piseth.design</p>
+                            </div>
+                        </div>
+                        @if ($promotion ?? null)
+                            <a href="{{ $promotion->ctaUrl() }}" class="hm-hnote">
+                                <span class="pill">{{ $promotion->isDiscount() ? __(':percent% off', ['percent' => $promotion->discount_percent]) : __('News') }}</span>
+                                <span class="t">{{ $promotion->localized('title') }}</span>
+                                @if (filled($promotion->localized('message')))
+                                    <span class="m">{{ $promotion->localized('message') }}</span>
+                                @endif
+                                <span class="go">{{ $promotion->ctaLabel() }} {!! $icon('arrow-right', 'i3') !!}</span>
+                            </a>
+                        @else
+                            <p class="hm-hempty {{ $hmKm ? 'hm-km' : '' }}">{{ $L("You're all caught up.", 'មិនមានការជូនដំណឹងថ្មីទេ។') }}</p>
+                        @endif
+                    </div>
+
+                    @auth
+                        <button type="button" class="hm-havatar" @click="acct = !acct; bell = false" :aria-expanded="acct.toString()" aria-expanded="false" aria-haspopup="true" aria-label="User profile menu">
+                            <x-user-avatar :user="$hmUser" :size="32" />
+                        </button>
+                        <div class="hm-hpanel" x-show="acct" x-cloak>
+                            <div class="hm-hpanel-head">
+                                <div class="hm-hrow">
+                                    <p class="hm-hname">{{ $hmUser->name }}</p>
+                                    <span class="hm-hrole {{ $hmUser->isAdmin() ? 'hm-hrole--teacher' : '' }}">{{ $hmUser->isAdmin() ? 'Teacher' : 'Student' }}</span>
+                                </div>
+                                <p class="hm-hmail">{{ $hmUser->email }}</p>
+                            </div>
+                            <div class="hm-hmenu">
+                                @if ($hmUser->isAdmin())
+                                    <a href="{{ route('admin.dashboard') }}" class="hm-hitem hm-hitem--accent">{!! $icon('shield', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Teacher Admin Portal', 'ផ្ទាំងគ្រប់គ្រងគ្រូបង្រៀន') }}</span></a>
+                                @endif
+                                <a href="{{ route('learning.index') }}" class="hm-hitem">{!! $icon('book', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Dashboard', 'ផ្ទាំងសិក្សារបស់ខ្ញុំ') }}</span></a>
+                                <a href="{{ route('learning.profile') }}" class="hm-hitem">{!! $icon('user', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Student Profile', 'គណនីនិស្សិត') }}</span></a>
+                                <a href="{{ route('profile.edit') }}" class="hm-hitem">{!! $icon('settings', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ __('Account settings') }}</span></a>
+                                <div class="hm-hsep">
+                                    <form method="POST" action="{{ route('locale') }}">
+                                        @csrf
+                                        <input type="hidden" name="locale" value="{{ $hmKm ? 'en' : 'km' }}">
+                                        <button type="submit" class="hm-hitem hm-hitem--split">
+                                            <span><span aria-hidden="true">{{ $hmKm ? '🇰🇭' : '🇬🇧' }}</span><span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Language: English (EN)', 'ភាសា: ខ្មែរ (KM)') }}</span></span>
+                                            <span class="hint {{ $hmKm ? 'hm-km' : '' }}">{{ $L('Switch KM', 'ប្តូរជា EN') }}</span>
+                                        </button>
+                                    </form>
+                                    <button type="button" class="hm-hitem hm-hitem--split" @click="toggleTheme($event)">
+                                        <span>
+                                            <span style="display:flex; color:#4DA3FF" x-show="dark">{!! $icon('moon', 'i35') !!}</span>
+                                            <span style="display:flex; color:#F59E0B" x-show="!dark" x-cloak>{!! $icon('sun', 'i35') !!}</span>
+                                            <span class="{{ $hmKm ? 'hm-km' : '' }}" x-text="dark ? @js($L('Appearance: Dark Mode', 'ទម្រង់ពន្លឺ: ងងឹត (Dark)')) : @js($L('Appearance: Light Mode', 'ទម្រង់ពន្លឺ: ភ្លឺ (Light)'))"></span>
+                                        </span>
+                                        <span class="hint hint--mono hm-mono">Toggle</span>
+                                    </button>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="hm-hitem hm-hitem--danger">{!! $icon('logout', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Log Out', 'ចាកចេញពីគណនី') }}</span></button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if ($hmUser->isAdmin())
+                            <a href="{{ route('admin.dashboard') }}" class="hm-hportal" title="Open Teacher / Admin Portal">{!! $icon('shield', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Teacher Portal', 'ផ្ទាំងគ្រូបង្រៀន') }}</span></a>
+                        @else
+                            <a href="{{ route('learning.index') }}" class="hm-hdash" title="Open Student Dashboard">{!! $icon('book', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Dashboard', 'ផ្ទាំងសិក្សា') }}</span></a>
+                        @endif
+                    @else
+                        <a href="{{ route('login') }}" class="hm-hsignin">{!! $icon('user', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Sign In', 'ចូលរៀន') }}</span></a>
+                        <a href="{{ route('admin.dashboard') }}" class="hm-hportal" title="Open Teacher / Admin Portal"><span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Teacher Portal', 'ផ្ទាំងគ្រូបង្រៀន') }}</span></a>
+                    @endauth
+                </div>
+            </div>
+        </header>
 
         <main class="hm-main">
 
@@ -1392,7 +1571,7 @@
             <div>
                 <a href="{{ route('home') }}" aria-current="page">{!! $icon('house', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Home', 'ទំព័រដើម') }}</span></a>
                 <a href="{{ route('courses') }}">{!! $icon('book', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Courses', 'វគ្គសិក្សា') }}</span></a>
-                <a href="{{ route('learning.index') }}">{!! $icon('folder', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Learning', 'ការសិក្សា') }}</span></a>
+                <a href="{{ route('courses', ['free' => 1]) }}">{!! $icon('folder', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Resources', 'ឯកសារ') }}</span></a>
                 <a href="{{ route('about') }}">{!! $icon('sparkles', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('About', 'អំពី') }}</span></a>
                 <a href="{{ route('learning.profile') }}">{!! $icon('user', 'i5') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Profile', 'គណនី') }}</span></a>
             </div>
