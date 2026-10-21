@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Support\ActivityFeed;
 use App\Support\LearningStats;
+use App\Support\StudentWork;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -62,6 +63,8 @@ class LearningController extends Controller
             ->get();
 
         $stats = new LearningStats($user);
+        $assignments = StudentWork::assignments($user);
+        $quizzes = StudentWork::quizzes($user);
 
         // Lessons finished across every enrolled course, against all the lessons in them.
         $lessonTotal = $user->enrollments->sum(fn (Enrollment $enrollment) => $enrollment->course?->modules->flatMap->lessons->count() ?? 0);
@@ -78,6 +81,10 @@ class LearningController extends Controller
             'posts' => ActivityFeed::ownedBy($user)->posts(20),
             'saved' => $user->savedResources()->published()->libraryOrder()->get(),
             'teacher' => User::query()->where('role', 'admin')->oldest('id')->first(),
+            'assignments' => $assignments,
+            'latestWork' => StudentWork::latestSubmissions($user, $assignments),
+            'quizzes' => $quizzes,
+            'bestQuiz' => StudentWork::bestAttempts($user, $quizzes),
         ]);
     }
 

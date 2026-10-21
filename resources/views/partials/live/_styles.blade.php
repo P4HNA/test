@@ -220,6 +220,7 @@
     html.dark .hm-hitem:hover { background: #1C232D; }
     .hm-hitem svg { color: #4DA3FF; }
     .hm-hitem--emerald svg { color: #10B981; }
+    .hm-hitem--orange svg { color: #F97316; }
     .hm-hitem--muted svg { color: #94A3B8; }
     .hm-hitem--strong { font-weight: 600; }
     .hm-hitem--split { justify-content: space-between; }

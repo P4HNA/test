@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
-use App\Models\Quiz;
+use App\Support\StudentWork;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -32,35 +32,15 @@ class AssignmentController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $courseIds = $user->isAdmin() ? null : $user->enrollments()->pluck('course_id');
+        $assignments = StudentWork::assignments($user);
+        $quizzes = StudentWork::quizzes($user);
 
-        $assignments = Assignment::query()
-            ->with('course')
-            ->unless($user->isAdmin(), fn ($q) => $q->published()->whereIn('course_id', $courseIds))
-            ->orderByRaw('due_at is null')->orderBy('due_at')->orderBy('number')
-            ->get();
-
-        $latest = $user->assignmentSubmissions()
-            ->whereIn('assignment_id', $assignments->pluck('id'))
-            ->orderByDesc('version')
-            ->get()
-            ->unique('assignment_id')
-            ->keyBy('assignment_id');
-
-        $quizzes = Quiz::query()
-            ->with('course')->withCount('questions')
-            ->unless($user->isAdmin(), fn ($q) => $q->published()->whereIn('course_id', $courseIds))
-            ->orderBy('sort_order')->orderBy('id')
-            ->get();
-
-        $best = $user->quizAttempts()
-            ->whereIn('quiz_id', $quizzes->pluck('id'))
-            ->orderByDesc('score')->orderByDesc('id')
-            ->get()
-            ->unique('quiz_id')
-            ->keyBy('quiz_id');
-
-        return view('assignments.index', compact('assignments', 'latest', 'quizzes', 'best'));
+        return view('assignments.index', [
+            'assignments' => $assignments,
+            'latest' => StudentWork::latestSubmissions($user, $assignments),
+            'quizzes' => $quizzes,
+            'best' => StudentWork::bestAttempts($user, $quizzes),
+        ]);
     }
 
     public function show(Request $request, Assignment $assignment): View

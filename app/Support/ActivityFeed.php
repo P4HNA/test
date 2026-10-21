@@ -3,12 +3,15 @@
 namespace App\Support;
 
 use App\Models\ActivityLike;
+use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Lesson;
 use App\Models\LessonCompletion;
 use App\Models\Promotion;
+use App\Models\QuizAttempt;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -57,13 +60,16 @@ class ActivityFeed
         $posts = $this->owner ? collect() : collect()
             ->merge($this->newLessons($teacher))
             ->merge($this->newCourses($teacher))
+            ->merge($this->newAssignments($teacher))
             ->merge($this->news());
 
         if ($this->viewer) {
             $posts = $posts
                 ->merge($this->certificates())
                 ->merge($this->finishedLessons())
-                ->merge($this->enrollments());
+                ->merge($this->enrollments())
+                ->merge($this->quizWins())
+                ->merge($this->approvedWork());
         }
 
         $posts = $posts->sortByDesc(fn (array $p) => $p['at']->getTimestamp())->take($limit)->values();
@@ -74,7 +80,7 @@ class ActivityFeed
     /** Whether a key looks like one of ours (checked before a like is saved). */
     public static function isValidKey(string $key): bool
     {
-        return (bool) preg_match('/^(lesson|course|news|cert|join):\d{1,12}$|^done:\d{1,12}:\d{1,12}:\d{8}$/', $key);
+        return (bool) preg_match('/^(lesson|course|news|cert|join|task|quiz|work):\d{1,12}$|^done:\d{1,12}:\d{1,12}:\d{8}$/', $key);
     }
 
     /** "Sothea Chan" -> "Sothea C."; one-word names stay as they are. */
@@ -131,6 +137,24 @@ class ActivityFeed
                 'thumb' => CoursePicture::for($course, 300),
                 'badge' => ['New Course', 'វគ្គថ្មី'],
                 'url' => route('courses.show', $course),
+            ]))->all();
+    }
+
+    private function newAssignments(?User $teacher): array
+    {
+        return Assignment::query()->published()->with('course')
+            ->whereHas('course', fn ($q) => $q->published())
+            ->latest('created_at')->latest('id')->limit(self::PER_KIND)->get()
+            ->map(fn (Assignment $a) => $this->post('task:'.$a->id, 'task', $a->created_at, [
+                'actor' => $this->teacherActor($a->course, $teacher),
+                'action' => ['posted a new assignment', 'បានដាក់កិច្ចការថ្មី'],
+                'title' => 'Assignment '.$a->code().' — '.$this->localizedOr($a, 'title'),
+                'subtitle' => $a->due_at
+                    ? $this->say('Due :date', 'កំណត់ :date', ['date' => $a->due_at->locale(app()->getLocale())->isoFormat('D MMM YYYY')])
+                    : $a->course->localized('title'),
+                'thumb' => $a->pictureSrc(),
+                'badge' => ['New Assignment', 'កិច្ចការថ្មី'],
+                'url' => route('assignments.show', $a),
             ]))->all();
     }
 
@@ -222,6 +246,48 @@ class ActivityFeed
                 'thumb' => CoursePicture::for($e->course, 300),
                 'badge' => ['New Student', 'សិស្សថ្មី'],
                 'url' => route('courses.show', $e->course),
+            ]))->all();
+    }
+
+    /** Passed quizzes: each student's best passing run per quiz. */
+    private function quizWins(): array
+    {
+        return QuizAttempt::query()->with(['user', 'quiz.course'])
+            ->where('passed', true)
+            ->whereHas('user')->whereHas('quiz', fn ($q) => $q->published())
+            ->when($this->owner, fn ($q, User $owner) => $q->where('user_id', $owner->getKey()))
+            ->latest('id')->limit(self::PER_KIND * 3)->get()
+            ->unique(fn (QuizAttempt $a) => $a->user_id.':'.$a->quiz_id)
+            ->take(self::PER_KIND)
+            ->map(fn (QuizAttempt $a) => $this->post('quiz:'.$a->id, 'quiz', $a->created_at, [
+                'actor' => $this->studentActor($a->user, $a->quiz->course),
+                'action' => ['passed a quiz', 'បានប្រឡងជាប់តេស្ត'],
+                'title' => $this->localizedOr($a->quiz, 'title'),
+                'subtitle' => $this->say('Scored :score% (:correct of :total)', 'ទទួលបាន :score% (:correct ក្នុងចំណោម :total)', ['score' => $a->score, 'correct' => $a->correct, 'total' => $a->total]),
+                'thumb' => $a->quiz->pictureSrc(),
+                'badge' => ['Quiz Passed', 'ជាប់តេស្ត'],
+                'url' => route('quizzes.show', $a->quiz),
+            ]))->values()->all();
+    }
+
+    /** Assignments the teacher approved. */
+    private function approvedWork(): array
+    {
+        return AssignmentSubmission::query()->with(['user', 'assignment.course'])
+            ->where('status', 'approved')
+            ->whereHas('user')->whereHas('assignment', fn ($q) => $q->published())
+            ->when($this->owner, fn ($q, User $owner) => $q->where('user_id', $owner->getKey()))
+            ->latest('reviewed_at')->latest('id')->limit(self::PER_KIND)->get()
+            ->map(fn (AssignmentSubmission $w) => $this->post('work:'.$w->id, 'work', $w->reviewed_at ?? $w->updated_at, [
+                'actor' => $this->studentActor($w->user, $w->assignment->course),
+                'action' => ['had an assignment approved', 'កិច្ចការត្រូវបានអនុម័ត'],
+                'title' => 'Assignment '.$w->assignment->code().' — '.$this->localizedOr($w->assignment, 'title'),
+                'subtitle' => $w->grade !== null
+                    ? $this->say('Grade :grade / 10', 'ពិន្ទុ :grade / 10', ['grade' => rtrim(rtrim((string) $w->grade, '0'), '.')])
+                    : $w->assignment->course->localized('title'),
+                'thumb' => $w->assignment->pictureSrc(),
+                'badge' => ['Approved', 'បានអនុម័ត'],
+                'url' => route('assignments.show', $w->assignment),
             ]))->all();
     }
 

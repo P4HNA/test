@@ -19,6 +19,8 @@
         ['about', route('about'), 'About', 'អំពីលោកគ្រូ'],
     ];
 
+    // "Assignments (#03)": the assignment that needs the student next, if any.
+    $liveTask = $hmUser ? \App\Support\StudentWork::focus($hmUser) : null;
     // "My Certificate" opens the newest certificate, or the achievements tab when there is none yet.
     $liveCertificate = $hmUser?->certificates()->latest('issued_at')->first();
     $liveCertificateUrl = $liveCertificate
@@ -82,6 +84,7 @@
                     <div class="hm-hmenu">
                         <a href="{{ route('learning.index') }}" class="hm-hitem">{!! $icon('book', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Dashboard', 'ផ្ទាំងសិក្សារបស់ខ្ញុំ') }}</span></a>
                         <a href="{{ route('learning.profile') }}" class="hm-hitem">{!! $icon('user', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Student Profile', 'គណនីនិស្សិត') }}</span></a>
+                        <a href="{{ $liveTask ? route('assignments.show', $liveTask) : route('assignments.index') }}" class="hm-hitem hm-hitem--orange">{!! $icon('file-text', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('Assignments', 'កិច្ចការ') }}@if ($liveTask) ({{ $liveTask->code() }})@endif</span></a>
                         <a href="{{ $liveCertificateUrl }}" class="hm-hitem hm-hitem--emerald">{!! $icon('grad', 'i35') !!}<span class="{{ $hmKm ? 'hm-km' : '' }}">{{ $L('My Certificate', 'វិញ្ញាបនបត្ររបស់ខ្ញុំ') }}</span></a>
                         <div class="hm-hsep">
                             <form method="POST" action="{{ route('locale') }}">

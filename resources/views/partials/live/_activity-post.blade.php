@@ -10,6 +10,9 @@
         'cert' => ['award', '#1877F2'],
         'done' => ['check-circle', '#3B82F6'],
         'join' => ['user', '#4DA3FF'],
+        'task' => ['file-text', '#F97316'],
+        'quiz' => ['trophy', '#F59E0B'],
+        'work' => ['check-circle', '#10B981'],
     ][$post['type']] ?? ['award', '#1877F2'];
     $actor = $post['actor'];
 @endphp

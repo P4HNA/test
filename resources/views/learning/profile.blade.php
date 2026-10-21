@@ -29,6 +29,8 @@
     $tabs = [
         'courses' => [$L('My Courses', 'វគ្គសិក្សារបស់ខ្ញុំ'), $user->enrollments->count()],
         'activity' => [$L('Activity', 'សកម្មភាពសិក្សា'), $posts->count()],
+        'assignments' => [$L('Assignments', 'កិច្ចការ & ការកែលម្អ'), $assignments->count()],
+        'quizzes' => [$L('Quiz Results', 'លទ្ធផលតេស្ត Quiz'), $bestQuiz->count()],
         'certificates' => [$L('Certificates', 'វិញ្ញាបនបត្រ'), $certificates->count()],
         'saved' => [$L('Saved', 'បានរក្សាទុក'), $saved->count()],
         'payments' => [$L('Payments', 'ការទូទាត់'), $payments->count()],
@@ -140,15 +142,10 @@
 
             /* ---------- tabs ---------- */
             .pf-body { display: flex; flex-direction: column; gap: 1.5rem; }
-            .pf-tabs { display: flex; align-items: center; gap: .375rem; padding: .25rem; border-radius: 1rem; background: #F5F7FA; border: 1px solid #E4E6EB; overflow-x: auto; scrollbar-width: thin; }
-            html.dark .pf-tabs { background: #242629; border-color: #2E3034; }
-            .pf-tab { flex-shrink: 0; padding: .625rem 1rem; border: 0; border-radius: .75rem; background: transparent; color: #65676B; font: inherit; font-size: .75rem; line-height: 1rem; font-weight: 600; white-space: nowrap; cursor: pointer; transition: all .15s ease; }
-            html.dark .pf-tab { color: #A1A1A6; }
-            .pf-tab:hover { color: #1C1C1E; }
-            html.dark .pf-tab:hover { color: #F5F5F7; }
-            .pf-tab[aria-selected="true"] { background: #fff; color: #1877F2; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
-            html.dark .pf-tab[aria-selected="true"] { background: #1C1C1E; color: #4595FF; }
-            .pf-tab b { margin-left: .375rem; font-weight: 600; opacity: .55; font-variant-numeric: tabular-nums; }
+            .pf-tabs { align-self: flex-start; max-width: 100%; }
+            .pf-count { display: inline-flex; min-width: 1.25rem; height: 1.125rem; margin-left: .375rem; padding: 0 .3125rem; align-items: center; justify-content: center; border-radius: 9999px; background: rgba(100, 116, 139, .14); font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+            .hm-tab[aria-selected="true"] .pf-count { background: rgba(24, 119, 242, .14); color: #1877F2; }
+            html.dark .hm-tab[aria-selected="true"] .pf-count { background: rgba(77, 163, 255, .2); color: #4DA3FF; }
             .pf-js .pf-panel:not(.is-on) { display: none; }
             .pf-panel { outline: none; scroll-margin-top: 6rem; }
             .pf-panel > * + * { margin-top: 1.5rem; }
@@ -306,6 +303,7 @@
             }
         </style>
         @include('partials.live._activity-styles')
+        @include('partials.live._task-styles')
     </x-slot:styles>
 
     <div class="pf-page">
@@ -380,28 +378,22 @@
             <div class="pf-stats">
                 <div class="pf-stat">
                     <span class="k pf-mono">Courses</span>
-                    <span class="v">{{ $user->enrollments->count() }}</span>
+                    <span class="v" data-fx-count>{{ $user->enrollments->count() }}</span>
                     <span class="s">Enrolled active</span>
                 </div>
                 <div class="pf-stat">
                     <span class="k pf-mono">Completed Lessons</span>
-                    <span class="v">{{ $lessonsDone }}</span>
+                    <span class="v" data-fx-count>{{ $lessonsDone }}</span>
                     <span class="s green">{{ $overallProgress }}% Progress</span>
                 </div>
                 <div class="pf-stat">
-                    <span class="k pf-mono">Hours Learned</span>
-                    <span class="v">{{ $stats->hoursLearned() }}<small>h</small></span>
-                    <span class="s amber">
-                        @if ($streak > 0)
-                            {{ $streak }}-day streak
-                        @else
-                            Best run: {{ $stats->longestStreak() }} days
-                        @endif
-                    </span>
+                    <span class="k pf-mono">Assignments</span>
+                    <span class="v" data-fx-count>{{ $latestWork->count() }}</span>
+                    <span class="s amber">{{ $latestWork->filter(fn ($w) => $w->isReviewed())->count() }} Reviewed</span>
                 </div>
                 <div class="pf-stat">
                     <span class="k pf-mono">Certificates</span>
-                    <span class="v blue">{{ $certificates->count() }}</span>
+                    <span class="v blue" data-fx-count>{{ $certificates->count() }}</span>
                     <span class="s">Issued by {{ $teacherName }}</span>
                 </div>
             </div>
@@ -409,11 +401,15 @@
 
         {{-- ================= Tabs ================= --}}
         <div class="pf-body">
-            <div class="pf-tabs" role="tablist" aria-label="{{ __('Profile sections') }}" data-pf-tabs>
-                @foreach ($tabs as $key => [$label, $count])
-                    <button type="button" class="pf-tab {{ $km }}" role="tab" id="pf-tab-{{ $key }}" data-tab="{{ $key }}"
-                        aria-controls="pf-panel-{{ $key }}" aria-selected="{{ $key === 'courses' ? 'true' : 'false' }}" tabindex="{{ $key === 'courses' ? '0' : '-1' }}">{{ $label }}<b>{{ $count }}</b></button>
-                @endforeach
+            <div class="hm-tabs pf-tabs" data-jelly-tabs data-pf-tabs>
+                <div class="hm-tabs-track" role="tablist" aria-label="{{ __('Profile sections') }}">
+                    <span class="hm-jelly-trail" aria-hidden="true"></span>
+                    <span class="hm-jelly" aria-hidden="true"><span class="hm-jelly-blob"></span><span class="hm-sparks"></span></span>
+                    @foreach ($tabs as $key => [$label, $count])
+                        <button type="button" class="hm-tab {{ $km }}" role="tab" id="pf-tab-{{ $key }}" data-value="{{ $key }}"
+                            aria-controls="pf-panel-{{ $key }}" aria-selected="{{ $key === 'courses' ? 'true' : 'false' }}">{{ $label }}<b class="pf-count">{{ $count }}</b></button>
+                    @endforeach
+                </div>
             </div>
 
             {{-- ---------- My courses ---------- --}}
@@ -518,6 +514,38 @@
                     <div class="ac-list" data-ac-list>
                         @foreach ($posts as $post)
                             @include('partials.live._activity-post', ['post' => $post])
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            {{-- ---------- Assignments ---------- --}}
+            <div class="pf-panel" id="pf-panel-assignments" role="tabpanel" aria-labelledby="pf-tab-assignments" tabindex="0">
+                @if ($assignments->isEmpty())
+                    <div class="pf-empty">
+                        {!! $icon('file-text', 'i5') !!}
+                        <p class="{{ $km }}">{{ $L('No assignments yet. They appear here when Teacher Piseth sets one for your courses.', 'មិនទាន់មានកិច្ចការទេ។ កិច្ចការនឹងបង្ហាញនៅទីនេះ ពេលលោកគ្រូដាក់ឲ្យសម្រាប់វគ្គរបស់អ្នក។') }}</p>
+                    </div>
+                @else
+                    <div class="tk-grid">
+                        @foreach ($assignments as $assignment)
+                            @include('partials.live._assignment-card', ['assignment' => $assignment, 'submission' => $latestWork->get($assignment->id)])
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            {{-- ---------- Quiz results ---------- --}}
+            <div class="pf-panel" id="pf-panel-quizzes" role="tabpanel" aria-labelledby="pf-tab-quizzes" tabindex="0">
+                @if ($quizzes->isEmpty())
+                    <div class="pf-empty">
+                        {!! $icon('trophy', 'i5') !!}
+                        <p class="{{ $km }}">{{ $L('No quizzes yet for your courses.', 'មិនទាន់មានតេស្តសម្រាប់វគ្គរបស់អ្នកទេ។') }}</p>
+                    </div>
+                @else
+                    <div class="tk-grid tk-grid--3">
+                        @foreach ($quizzes->sortByDesc(fn ($q) => $bestQuiz->has($q->id)) as $quiz)
+                            @include('partials.live._quiz-card', ['quiz' => $quiz, 'attempt' => $bestQuiz->get($quiz->id)])
                         @endforeach
                     </div>
                 @endif
@@ -675,39 +703,29 @@
                 'use strict';
                 var text = @json($pfText);
 
-                /* ---- tabs (the URL hash opens one: #activity, #achievements, #payments ...) ---- */
+                /* ---- tabs: the jelly tabs announce a change; the URL hash opens one (#assignments, #achievements ...) ---- */
                 var bar = document.querySelector('[data-pf-tabs]');
-                var tabs = bar ? [].slice.call(bar.querySelectorAll('[role="tab"]')) : [];
-                var alias = { achievements: 'certificates' };
+                var alias = { achievements: 'certificates', certificate: 'certificates' };
 
-                function open(name, focus, remember) {
-                    var tab = tabs.filter(function (t) { return t.getAttribute('data-tab') === name; })[0];
-                    if (!tab) return false;
-                    tabs.forEach(function (t) {
-                        var on = t === tab;
-                        t.setAttribute('aria-selected', on ? 'true' : 'false');
-                        t.tabIndex = on ? 0 : -1;
-                        document.getElementById(t.getAttribute('aria-controls')).classList.toggle('is-on', on);
-                    });
-                    if (focus) tab.focus();
-                    tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                function show(name, remember) {
+                    var panel = document.getElementById('pf-panel-' + name);
+                    if (!panel) return;
+                    document.querySelectorAll('.pf-panel').forEach(function (p) { p.classList.toggle('is-on', p === panel); });
+                    if (window.fxArm) fxArm();
                     if (remember) { try { history.replaceState(null, '', '#' + name); } catch (e) {} }
+                }
+                function open(name) {
+                    var tab = bar && bar.querySelector('[data-value="' + name + '"]');
+                    if (!tab) return false;
+                    if (tab.getAttribute('aria-selected') === 'true') show(name, false); else tab.click();
+                    tab.scrollIntoView({ block: 'nearest', inline: 'center' });
                     return true;
                 }
-
-                tabs.forEach(function (t, i) {
-                    t.addEventListener('click', function () { open(t.getAttribute('data-tab'), false, true); });
-                    t.addEventListener('keydown', function (e) {
-                        var step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
-                        if (step) { e.preventDefault(); open(tabs[(i + step + tabs.length) % tabs.length].getAttribute('data-tab'), true, true); }
-                        if (e.key === 'Home') { e.preventDefault(); open(tabs[0].getAttribute('data-tab'), true, true); }
-                        if (e.key === 'End') { e.preventDefault(); open(tabs[tabs.length - 1].getAttribute('data-tab'), true, true); }
-                    });
-                });
+                if (bar) bar.addEventListener('jelly:change', function (e) { show(e.detail.value, true); });
 
                 function fromHash() {
                     var name = location.hash.replace('#', '');
-                    if (open(alias[name] || name, false, false)) bar.scrollIntoView({ block: 'start' });
+                    if (name && open(alias[name] || name)) bar.scrollIntoView({ block: 'start' });
                 }
                 fromHash();
                 window.addEventListener('hashchange', fromHash);
@@ -715,7 +733,7 @@
                 document.querySelectorAll('[data-tab-link]').forEach(function (a) {
                     a.addEventListener('click', function (e) {
                         e.preventDefault();
-                        open(a.getAttribute('data-tab-link'), false, true);
+                        open(a.getAttribute('data-tab-link'));
                         bar.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     });
                 });

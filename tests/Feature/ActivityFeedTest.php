@@ -60,6 +60,27 @@ class ActivityFeedTest extends TestCase
             ->assertSee('joined the course');
     }
 
+    public function test_assignments_and_quiz_wins_are_posted(): void
+    {
+        $assignment = \App\Models\Assignment::factory()->create(['title_en' => 'Typography Poster']);
+        $quiz = \App\Models\Quiz::factory()->create(['course_id' => $assignment->course_id, 'title_en' => 'Colour Quiz']);
+        $student = User::factory()->create(['name' => 'Bopha Vann']);
+        \App\Models\QuizAttempt::query()->create(['quiz_id' => $quiz->id, 'user_id' => $student->id, 'answers' => [], 'correct' => 5, 'total' => 5, 'score' => 100, 'passed' => true]);
+
+        $this->get(route('activity.index'))->assertOk()
+            ->assertSee('posted a new assignment')
+            ->assertSee('Assignment #03 — Typography Poster')
+            ->assertDontSee('Bopha');
+
+        $this->actingAs(User::factory()->create())->get(route('activity.index'))->assertOk()
+            ->assertSee('Bopha V.')
+            ->assertSee('passed a quiz')
+            ->assertSee('Scored 100% (5 of 5)');
+
+        $this->assertTrue(ActivityFeed::isValidKey('quiz:12'));
+        $this->assertTrue(ActivityFeed::isValidKey('task:3'));
+    }
+
     public function test_a_like_toggles_and_is_counted(): void
     {
         $user = User::factory()->create();
