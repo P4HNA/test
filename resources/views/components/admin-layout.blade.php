@@ -12,6 +12,8 @@
             ['key' => 'users', 'label' => 'Students', 'route' => 'admin.users', 'icon' => 'users'],
             ['key' => 'certificates', 'label' => 'Certificates', 'route' => 'admin.certificates', 'icon' => 'award'],
             ['key' => 'resources', 'label' => 'Resources', 'route' => 'admin.resources', 'icon' => 'archive'],
+            ['key' => 'assignments', 'label' => 'Assignments', 'route' => 'admin.assignments', 'icon' => 'pencil'],
+            ['key' => 'quizzes', 'label' => 'Quizzes', 'route' => 'admin.quizzes', 'icon' => 'check-circle'],
         ],
         'Finance' => [
             ['key' => 'payments', 'label' => 'Payments', 'route' => 'admin.payments', 'icon' => 'card'],

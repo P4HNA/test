@@ -183,6 +183,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(DesignResource::class, 'design_resource_bookmarks')->withTimestamps();
     }
 
+    public function assignmentSubmissions(): HasMany
+    {
+        return $this->hasMany(AssignmentSubmission::class);
+    }
+
+    public function quizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
+
     public function enrollmentFor(Course $course): ?Enrollment
     {
         if ($this->relationLoaded('enrollments')) {

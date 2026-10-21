@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\CertificateController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Admin\LessonController;
 use App\Http\Controllers\Admin\ModuleController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PromotionController;
+use App\Http\Controllers\Admin\QuizController;
 use App\Http\Controllers\Admin\ResourceController;
 use App\Http\Controllers\Admin\ThumbnailController;
 use App\Http\Controllers\Admin\UserController;
@@ -127,4 +129,24 @@ Route::middleware(['admin.network', 'auth', 'admin'])
         Route::put('resources/{resource}', [ResourceController::class, 'update'])->name('resources.update');
         Route::patch('resources/{resource}/toggle', [ResourceController::class, 'toggle'])->name('resources.toggle');
         Route::delete('resources/{resource}', [ResourceController::class, 'destroy'])->name('resources.destroy');
+
+        // Assignments: set them, then review and grade what students hand in
+        Route::get('assignments', [AssignmentController::class, 'index'])->name('assignments');
+        Route::get('assignments/create', [AssignmentController::class, 'create'])->name('assignments.create');
+        Route::post('assignments', [AssignmentController::class, 'store'])->name('assignments.store');
+        Route::get('assignments/{assignment}/edit', [AssignmentController::class, 'edit'])->name('assignments.edit');
+        Route::put('assignments/{assignment}', [AssignmentController::class, 'update'])->name('assignments.update');
+        Route::patch('assignments/{assignment}/toggle', [AssignmentController::class, 'toggle'])->name('assignments.toggle');
+        Route::delete('assignments/{assignment}', [AssignmentController::class, 'destroy'])->name('assignments.destroy');
+        Route::get('submissions/{submission}', [AssignmentController::class, 'review'])->name('submissions.review');
+        Route::patch('submissions/{submission}', [AssignmentController::class, 'grade'])->name('submissions.grade');
+
+        // Quizzes: multiple-choice questions per course
+        Route::get('quizzes', [QuizController::class, 'index'])->name('quizzes');
+        Route::get('quizzes/create', [QuizController::class, 'create'])->name('quizzes.create');
+        Route::post('quizzes', [QuizController::class, 'store'])->name('quizzes.store');
+        Route::get('quizzes/{quiz}/edit', [QuizController::class, 'edit'])->name('quizzes.edit');
+        Route::put('quizzes/{quiz}', [QuizController::class, 'update'])->name('quizzes.update');
+        Route::patch('quizzes/{quiz}/toggle', [QuizController::class, 'toggle'])->name('quizzes.toggle');
+        Route::delete('quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
     });

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CertificateRequestController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\LearningController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PayWayCallbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileEmailChangeController;
+use App\Http\Controllers\QuizController;
 use App\Http\Controllers\ResourceController;
 use Illuminate\Support\Facades\Route;
 
@@ -79,6 +81,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/my-learning', [LearningController::class, 'index'])->name('learning.index');
     Route::get('/my-profile', [LearningController::class, 'profile'])->name('learning.profile');
     Route::get('/certificates/{certificate}', [LearningController::class, 'certificate'])->name('certificates.show');
+
+    // Assignments: the brief, handing in work (each upload is a new version), the teacher's review.
+    Route::get('/assignments', [AssignmentController::class, 'index'])->name('assignments.index');
+    Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('assignments.show');
+    Route::post('/assignments/{assignment}/submissions', [AssignmentController::class, 'submit'])
+        ->middleware('throttle:12,1')
+        ->name('assignments.submit');
+    Route::get('/assignments/{assignment}/brief', [AssignmentController::class, 'brief'])->name('assignments.brief');
+    Route::get('/assignment-work/{submission}', [AssignmentController::class, 'work'])->name('assignments.work');
+
+    // Quizzes: questions one at a time, checked as you go, scored at the end.
+    Route::get('/quizzes/{quiz}', [QuizController::class, 'show'])->name('quizzes.show');
+    Route::post('/quizzes/{quiz}/check', [QuizController::class, 'check'])->middleware('throttle:120,1')->name('quizzes.check');
+    Route::post('/quizzes/{quiz}/attempts', [QuizController::class, 'store'])->middleware('throttle:20,1')->name('quizzes.attempts');
+    Route::get('/quizzes/{quiz}/results/{attempt}', [QuizController::class, 'result'])->name('quizzes.result');
 
     // Finishing a course does not print a certificate by itself: the student
     // sends their real name and Telegram, and an admin checks and approves it.

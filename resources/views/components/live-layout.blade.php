@@ -121,6 +121,7 @@
     </div>
 
     @include('partials.live._tabs-script')
+    @include('partials.live._fx')
     {{ $scripts ?? '' }}
 </body>
 
